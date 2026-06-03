@@ -454,9 +454,7 @@ function VistaLogin({ onLogin, usuarios }) {
         <button onClick={intentarLogin} style={{ width: "100%", padding: "14px", borderRadius: 10, background: G.accent, border: "none", color: "#fff", fontWeight: 700, fontSize: 15 }}>
           Ingresar
         </button>
-        <div style={{ marginTop: 16, fontSize: 11, color: G.textMuted, textAlign: "center" }}>
-          Clave inicial: <span style={{ color: G.textDim, fontFamily: G.mono }}>ccobra2024</span>
-        </div>
+
       </div>
     </div>
   );
@@ -878,11 +876,15 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function VistaDashboard({ registros, setPrefill, setVista }) {
-  const [piso, setPiso]       = useState(1);
+  const [piso, setPiso]         = useState(1);
   const [faseOpen, setFaseOpen] = useState({ F1: true });
   const [rubroOpen, setRubroOpen] = useState({});
-  const [sel, setSel]         = useState(null);
+  const [sel, setSel]           = useState(null);
   const deptos = PISOS[piso];
+
+  // Ancho fijo de celda para alineación consistente
+  const CELL_W = 34;
+  const ITEM_COL_W = 190;
 
   function handleCelda(piso, depto, itemId, faseId) {
     const key = `${piso}-${depto}-${itemId}-${faseId}`;
@@ -893,6 +895,12 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
     if (!key) return null;
     const parts = key.split("-");
     return { piso: parseInt(parts[0]), depto: parts[1], itemId: parseInt(parts[2]), faseId: parts[3] };
+  }
+
+  function toggleTodosRubros(faseId, rubrosConItems, abrir) {
+    const updates = {};
+    rubrosConItems.forEach(r => { updates[`${faseId}-${r.id}`] = abrir; });
+    setRubroOpen(prev => ({ ...prev, ...updates }));
   }
 
   const selParsed = parseSelKey(sel);
@@ -917,17 +925,34 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
         const rubrosConItems = fase.rubros.filter(r => r.items.length > 0);
         if (rubrosConItems.length === 0) return null;
         const faseAbierta = !!faseOpen[fase.id];
+        const todosAbiertos = rubrosConItems.every(r => !!rubroOpen[`${fase.id}-${r.id}`]);
 
         return (
           <div key={fase.id} style={{ margin: "10px 16px 0" }}>
-            <button onClick={() => setFaseOpen(prev => ({ ...prev, [fase.id]: !prev[fase.id] }))} style={{
-              width: "100%", padding: "10px 14px", background: G.surface, border: `1px solid ${G.border}`,
-              borderRadius: faseAbierta ? "10px 10px 0 0" : 10,
-              color: G.accent, display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: 13,
-            }}>
-              <span>{fase.nombre}</span>
-              <span style={{ fontSize: 16, color: G.textMuted }}>{faseAbierta ? "▾" : "▸"}</span>
-            </button>
+            {/* Header de fase con botón abrir/cerrar todos */}
+            <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+              <button onClick={() => setFaseOpen(prev => ({ ...prev, [fase.id]: !prev[fase.id] }))} style={{
+                flex: 1, padding: "10px 14px", background: G.surface, border: `1px solid ${G.border}`,
+                borderRight: "none",
+                borderRadius: faseAbierta ? "10px 0 0 0" : "10px 0 0 10px",
+                color: G.accent, display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: 13,
+              }}>
+                <span>{fase.nombre}</span>
+                <span style={{ fontSize: 16, color: G.textMuted }}>{faseAbierta ? "▾" : "▸"}</span>
+              </button>
+              {faseAbierta && (
+                <button
+                  onClick={() => toggleTodosRubros(fase.id, rubrosConItems, !todosAbiertos)}
+                  title={todosAbiertos ? "Cerrar todos los rubros" : "Abrir todos los rubros"}
+                  style={{
+                    padding: "10px 12px", background: G.surface2, border: `1px solid ${G.border}`,
+                    borderRadius: "0 10px 0 0",
+                    color: G.textMuted, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+                  }}>
+                  {todosAbiertos ? "▴ Cerrar todos" : "▾ Abrir todos"}
+                </button>
+              )}
+            </div>
 
             {faseAbierta && rubrosConItems.map(rubro => {
               const rubroKey = `${fase.id}-${rubro.id}`;
@@ -944,23 +969,26 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
 
                   {rubroAbierto && (
                     <div style={{ overflowX: "auto", padding: "8px 12px" }}>
-                      <table style={{ borderCollapse: "separate", borderSpacing: 3, minWidth: "max-content" }}>
+                      <table style={{ borderCollapse: "separate", borderSpacing: 3, tableLayout: "fixed", width: `${ITEM_COL_W + deptos.length * (CELL_W + 3) + 10}px` }}>
+                        <colgroup>
+                          <col style={{ width: ITEM_COL_W }} />
+                          {deptos.map(d => <col key={d} style={{ width: CELL_W }} />)}
+                        </colgroup>
                         <thead>
                           <tr>
-                            <th style={{ textAlign: "left", fontSize: 10, color: G.textMuted, padding: "0 8px 6px 0", fontWeight: 400, minWidth: 180 }}>Ítem</th>
-                            {deptos.map(d => <th key={d} style={{ fontSize: 11, fontWeight: 700, color: G.accent, textAlign: "center", padding: "0 1px 6px", minWidth: 34 }}>{d}</th>)}
+                            <th style={{ textAlign: "left", fontSize: 10, color: G.textMuted, padding: "0 8px 6px 0", fontWeight: 400 }}>Ítem</th>
+                            {deptos.map(d => <th key={d} style={{ fontSize: 11, fontWeight: 700, color: G.accent, textAlign: "center", padding: "0 0 6px" }}>{d}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {rubro.items.map(item => {
-                            const selKey = `${piso}-${deptos[0]}-${item.id}-${fase.id}`;
                             return (
                               <>
                                 <tr key={item.id}>
-                                  <td style={{ fontSize: 11, color: G.textDim, paddingRight: 10, whiteSpace: "nowrap", paddingBottom: 3 }}>
+                                  <td style={{ fontSize: 11, color: G.textDim, paddingRight: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingBottom: 3, maxWidth: ITEM_COL_W }}>
                                     <span style={{ fontFamily: G.mono, fontSize: 9, color: G.textMuted, marginRight: 4 }}>#{item.id}</span>
                                     {item.local !== "GENERAL" && <span style={{ color: G.textMuted, marginRight: 3 }}>[{item.local}]</span>}
-                                    {item.desc.length > 35 ? item.desc.slice(0, 35) + "…" : item.desc}
+                                    {item.desc}
                                   </td>
                                   {deptos.map(d => {
                                     const vigente = getEstadoVigente(registros, piso, d, item.id, fase.id);
@@ -973,7 +1001,7 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
                                       <td key={d} onClick={() => handleCelda(piso, d, item.id, fase.id)}
                                         title={`${e.label}${vigente?.obs ? ": " + vigente.obs : ""}${apto ? " ✅ R2" : ""}`}
                                         style={{
-                                          width: 34, height: 34, minWidth: 34,
+                                          width: CELL_W, height: CELL_W, minWidth: CELL_W,
                                           background: isSelected ? e.color + "55" : e.bg,
                                           border: `2px solid ${isSelected ? e.color : vigente ? e.border : G.border}`,
                                           borderRadius: 5, cursor: "pointer", textAlign: "center",
@@ -1016,9 +1044,38 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
 }
 
 // ─── CERTIFICACIONES ──────────────────────────────────────────────────────────
+function CertChip({ aptos, total, sinItems }) {
+  const apto    = !sinItems && aptos === total;
+  const parcial = !sinItems && aptos > 0 && !apto;
+  const bc = apto ? "#16a34a" : parcial ? "#a16207" : G.border;
+  const tc = apto ? "#22c55e" : parcial ? "#eab308" : G.textMuted;
+  const bg = apto ? "#052e16" : parcial ? "#1c1a02" : G.surface2;
+  return (
+    <div style={{ background: bg, border: `2px solid ${bc}`, borderRadius: 8, padding: "4px 8px", textAlign: "center", minWidth: 60 }}>
+      <div style={{ fontSize: 10, fontFamily: G.mono, color: tc, marginBottom: 2 }}>
+        {sinItems ? "—" : `${aptos}/${total}`}
+      </div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: tc }}>
+        {sinItems ? "S/I" : apto ? "✅ APTO" : parcial ? "⏳ PARCIAL" : "⛔ SIN R2"}
+      </div>
+    </div>
+  );
+}
+
 function VistaCertificaciones({ registros, setVista }) {
   const [piso, setPiso] = useState(1);
   const deptos = PISOS[piso];
+
+  // Resumen por rubro en todo el piso (todos los deptos)
+  function getCertRubroPiso(rubro, faseId) {
+    if (rubro.items.length === 0) return { aptos: 0, total: 0, sinItems: true };
+    const total = rubro.items.length * deptos.length;
+    const aptos = deptos.reduce((acc, d) => {
+      const c = getCertRubro(registros, piso, d, rubro, faseId);
+      return acc + c.aptos;
+    }, 0);
+    return { aptos, total, sinItems: false };
+  }
 
   return (
     <div style={{ paddingBottom: 60 }}>
@@ -1039,37 +1096,49 @@ function VistaCertificaciones({ registros, setVista }) {
           const rubrosConItems = fase.rubros.filter(r => r.items.length > 0);
           if (rubrosConItems.length === 0) return null;
           return (
-            <div key={fase.id} style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: G.accent, letterSpacing: 1, marginBottom: 10 }}>{fase.nombre.toUpperCase()}</div>
+            <div key={fase.id} style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: G.accent, letterSpacing: 1, marginBottom: 12 }}>{fase.nombre.toUpperCase()}</div>
+
               {rubrosConItems.map(rubro => {
+                const certPiso = getCertRubroPiso(rubro, fase.id);
                 return (
-                  <div key={rubro.id} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: G.textDim, fontWeight: 600, marginBottom: 6 }}>{rubro.nombre}</div>
-                    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                      {deptos.map(d => {
-                        const cert = getCertRubro(registros, piso, d, rubro, fase.id);
-                        const apto = !cert.sinItems && cert.aptos === cert.total;
-                        const parcial = !cert.sinItems && cert.aptos > 0 && !apto;
-                        const bc = apto ? "#16a34a" : parcial ? "#a16207" : G.border;
-                        const tc = apto ? "#22c55e" : parcial ? "#eab308" : G.textMuted;
-                        const bg = apto ? "#052e16" : parcial ? "#1c1a02" : G.surface2;
-                        return (
-                          <div key={d} style={{ minWidth: 72, background: G.surface, border: `2px solid ${bc}`, borderRadius: 10, padding: "8px 8px 6px", textAlign: "center", flexShrink: 0 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: G.accent, marginBottom: 4 }}>Dto {d}</div>
-                            {!cert.sinItems && (
-                              <div style={{ height: 3, background: G.border, borderRadius: 2, marginBottom: 4, overflow: "hidden" }}>
-                                <div style={{ height: "100%", borderRadius: 2, width: `${cert.pct}%`, background: tc }} />
+                  <div key={rubro.id} style={{ marginBottom: 14, background: G.surface, border: `1px solid ${G.border}`, borderRadius: 10, overflow: "hidden" }}>
+                    {/* Encabezado del rubro con resumen de piso */}
+                    <div style={{ padding: "8px 12px", background: G.surface2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{rubro.nombre}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 10, color: G.textMuted }}>Piso {piso} completo:</span>
+                        <CertChip {...certPiso} />
+                      </div>
+                    </div>
+                    {/* Detalle por departamento */}
+                    <div style={{ padding: "10px 12px" }}>
+                      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                        {deptos.map(d => {
+                          const cert = getCertRubro(registros, piso, d, rubro, fase.id);
+                          const apto    = !cert.sinItems && cert.aptos === cert.total;
+                          const parcial = !cert.sinItems && cert.aptos > 0 && !apto;
+                          const bc = apto ? "#16a34a" : parcial ? "#a16207" : G.border;
+                          const tc = apto ? "#22c55e" : parcial ? "#eab308" : G.textMuted;
+                          const bg = apto ? "#052e16" : parcial ? "#1c1a02" : G.surface2;
+                          return (
+                            <div key={d} style={{ minWidth: 70, background: G.surface, border: `2px solid ${bc}`, borderRadius: 10, padding: "7px 7px 5px", textAlign: "center", flexShrink: 0 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: G.accent, marginBottom: 4 }}>Dto {d}</div>
+                              {!cert.sinItems && (
+                                <div style={{ height: 3, background: G.border, borderRadius: 2, marginBottom: 4, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", borderRadius: 2, width: `${cert.pct}%`, background: tc }} />
+                                </div>
+                              )}
+                              <div style={{ fontSize: 10, fontFamily: G.mono, color: tc, marginBottom: 4 }}>
+                                {cert.sinItems ? "—" : `${cert.aptos}/${cert.total}`}
                               </div>
-                            )}
-                            <div style={{ fontSize: 10, fontFamily: G.mono, color: tc, marginBottom: 4 }}>
-                              {cert.sinItems ? "—" : `${cert.aptos}/${cert.total}`}
+                              <div style={{ fontSize: 9, fontWeight: 700, color: tc, background: bg, border: `1px solid ${bc}`, borderRadius: 5, padding: "2px 4px" }}>
+                                {cert.sinItems ? "S/I" : apto ? "✅ APTO" : parcial ? "⏳ PARCIAL" : "⛔ SIN R2"}
+                              </div>
                             </div>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: tc, background: bg, border: `1px solid ${bc}`, borderRadius: 5, padding: "2px 4px" }}>
-                              {cert.sinItems ? "SIN ITEMS" : apto ? "✅ APTO" : parcial ? "⏳ PARCIAL" : "⛔ SIN R2"}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
@@ -1093,7 +1162,9 @@ function VistaCertificaciones({ registros, setVista }) {
 
 // ─── INFORME FINAL ────────────────────────────────────────────────────────────
 function VistaInforme({ registros }) {
-  const pendientes = useMemo(() => {
+  const [filtroFase, setFiltroFase]   = useState("TODAS");
+  const [filtroRubro, setFiltroRubro] = useState("TODOS");
+  const todosPendientes = useMemo(() => {
     const result = [];
     FASES.forEach(fase => {
       fase.rubros.forEach(rubro => {
@@ -1114,9 +1185,25 @@ function VistaInforme({ registros }) {
     return result;
   }, [registros]);
 
-  function descargarPDF() {
-    window.print();
-  }
+  const pendientes = useMemo(() => {
+    return todosPendientes.filter(p => {
+      if (filtroFase !== "TODAS" && p.fase.id !== filtroFase) return false;
+      if (filtroRubro !== "TODOS" && p.rubro.id !== filtroRubro) return false;
+      return true;
+    });
+  }, [todosPendientes, filtroFase, filtroRubro]);
+
+  // Rubros disponibles según fase seleccionada
+  const rubrosDisponibles = useMemo(() => {
+    const fases = filtroFase === "TODAS" ? FASES : FASES.filter(f => f.id === filtroFase);
+    const set = new Map();
+    fases.forEach(f => f.rubros.forEach(r => {
+      if (todosPendientes.some(p => p.rubro.id === r.id)) set.set(r.id, r.nombre);
+    }));
+    return Array.from(set.entries());
+  }, [filtroFase, todosPendientes]);
+
+  function descargarPDF() { window.print(); }
 
   if (pendientes.length === 0) {
     return (
@@ -1141,14 +1228,28 @@ function VistaInforme({ registros }) {
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Cabecera */}
-      <div className="no-print" style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${G.border}` }}>
-        <div style={{ fontSize: 13, color: G.textMuted }}>
-          <span style={{ fontFamily: G.mono, fontWeight: 700, color: "#ef4444", fontSize: 18 }}>{pendientes.length}</span> ítems pendientes
+      <div className="no-print" style={{ padding: "12px 16px", borderBottom: `1px solid ${G.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: G.textMuted }}>
+            <span style={{ fontFamily: G.mono, fontWeight: 700, color: "#ef4444", fontSize: 18 }}>{pendientes.length}</span>
+            <span style={{ marginLeft: 4 }}>de {todosPendientes.length} ítems pendientes</span>
+          </div>
+          <button onClick={descargarPDF} style={{ padding: "8px 16px", borderRadius: 8, background: G.accent, border: "none", color: "#fff", fontWeight: 600, fontSize: 13 }}>📄 PDF</button>
         </div>
-        <button onClick={descargarPDF} style={{
-          padding: "8px 16px", borderRadius: 8, background: G.accent, border: "none",
-          color: "#fff", fontWeight: 600, fontSize: 13,
-        }}>📄 Descargar PDF</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <select value={filtroFase} onChange={e => { setFiltroFase(e.target.value); setFiltroRubro("TODOS"); }}
+            style={{ flex: 1, minWidth: 120, padding: "7px 10px", fontSize: 12 }}>
+            <option value="TODAS">Todas las fases</option>
+            {FASES.filter(f => f.rubros.some(r => r.items.length > 0)).map(f => (
+              <option key={f.id} value={f.id}>{f.nombre}</option>
+            ))}
+          </select>
+          <select value={filtroRubro} onChange={e => setFiltroRubro(e.target.value)}
+            style={{ flex: 1, minWidth: 140, padding: "7px 10px", fontSize: 12 }}>
+            <option value="TODOS">Todos los rubros</option>
+            {rubrosDisponibles.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Encabezado para impresión */}
