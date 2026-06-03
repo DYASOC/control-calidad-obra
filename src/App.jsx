@@ -1063,10 +1063,10 @@ function CertChip({ aptos, total, sinItems }) {
 }
 
 function VistaCertificaciones({ registros, setVista }) {
-  const [piso, setPiso] = useState(1);
+  const [piso, setPiso]         = useState(1);
+  const [rubroOpen, setRubroOpen] = useState({});
   const deptos = PISOS[piso];
 
-  // Resumen por rubro en todo el piso (todos los deptos)
   function getCertRubroPiso(rubro, faseId) {
     if (rubro.items.length === 0) return { aptos: 0, total: 0, sinItems: true };
     const total = rubro.items.length * deptos.length;
@@ -1075,6 +1075,16 @@ function VistaCertificaciones({ registros, setVista }) {
       return acc + c.aptos;
     }, 0);
     return { aptos, total, sinItems: false };
+  }
+
+  function toggleRubro(key) {
+    setRubroOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleTodosFase(faseId, rubros, abrir) {
+    const updates = {};
+    rubros.forEach(r => { updates[`${faseId}-${r.id}`] = abrir; });
+    setRubroOpen(prev => ({ ...prev, ...updates }));
   }
 
   return (
@@ -1095,51 +1105,72 @@ function VistaCertificaciones({ registros, setVista }) {
         {FASES.map(fase => {
           const rubrosConItems = fase.rubros.filter(r => r.items.length > 0);
           if (rubrosConItems.length === 0) return null;
+          const todosAbiertos = rubrosConItems.every(r => !!rubroOpen[`${fase.id}-${r.id}`]);
+
           return (
             <div key={fase.id} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: G.accent, letterSpacing: 1, marginBottom: 12 }}>{fase.nombre.toUpperCase()}</div>
+              {/* Encabezado de fase con botón abrir/cerrar todos */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: G.accent, letterSpacing: 1 }}>{fase.nombre.toUpperCase()}</div>
+                <button onClick={() => toggleTodosFase(fase.id, rubrosConItems, !todosAbiertos)} style={{
+                  padding: "4px 10px", borderRadius: 6, border: `1px solid ${G.border}`,
+                  background: G.surface2, color: G.textMuted, fontSize: 11, fontWeight: 600,
+                }}>
+                  {todosAbiertos ? "▴ Cerrar todos" : "▾ Abrir todos"}
+                </button>
+              </div>
 
               {rubrosConItems.map(rubro => {
                 const certPiso = getCertRubroPiso(rubro, fase.id);
+                const rubroKey = `${fase.id}-${rubro.id}`;
+                const abierto  = !!rubroOpen[rubroKey];
                 return (
-                  <div key={rubro.id} style={{ marginBottom: 14, background: G.surface, border: `1px solid ${G.border}`, borderRadius: 10, overflow: "hidden" }}>
-                    {/* Encabezado del rubro con resumen de piso */}
-                    <div style={{ padding: "8px 12px", background: G.surface2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{rubro.nombre}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 10, color: G.textMuted }}>Piso {piso} completo:</span>
+                  <div key={rubro.id} style={{ marginBottom: 10, background: G.surface, border: `1px solid ${G.border}`, borderRadius: 10, overflow: "hidden" }}>
+                    {/* Encabezado clickeable del rubro */}
+                    <button onClick={() => toggleRubro(rubroKey)} style={{
+                      width: "100%", padding: "10px 12px", background: G.surface2, border: "none",
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 16, color: G.textMuted }}>{abierto ? "▾" : "▸"}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{rubro.nombre}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 10, color: G.textMuted, whiteSpace: "nowrap" }}>Piso {piso}:</span>
                         <CertChip {...certPiso} />
                       </div>
-                    </div>
-                    {/* Detalle por departamento */}
-                    <div style={{ padding: "10px 12px" }}>
-                      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-                        {deptos.map(d => {
-                          const cert = getCertRubro(registros, piso, d, rubro, fase.id);
-                          const apto    = !cert.sinItems && cert.aptos === cert.total;
-                          const parcial = !cert.sinItems && cert.aptos > 0 && !apto;
-                          const bc = apto ? "#16a34a" : parcial ? "#a16207" : G.border;
-                          const tc = apto ? "#22c55e" : parcial ? "#eab308" : G.textMuted;
-                          const bg = apto ? "#052e16" : parcial ? "#1c1a02" : G.surface2;
-                          return (
-                            <div key={d} style={{ minWidth: 70, background: G.surface, border: `2px solid ${bc}`, borderRadius: 10, padding: "7px 7px 5px", textAlign: "center", flexShrink: 0 }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: G.accent, marginBottom: 4 }}>Dto {d}</div>
-                              {!cert.sinItems && (
-                                <div style={{ height: 3, background: G.border, borderRadius: 2, marginBottom: 4, overflow: "hidden" }}>
-                                  <div style={{ height: "100%", borderRadius: 2, width: `${cert.pct}%`, background: tc }} />
+                    </button>
+                    {/* Detalle por departamento — colapsable */}
+                    {abierto && (
+                      <div style={{ padding: "10px 12px" }}>
+                        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                          {deptos.map(d => {
+                            const cert = getCertRubro(registros, piso, d, rubro, fase.id);
+                            const apto    = !cert.sinItems && cert.aptos === cert.total;
+                            const parcial = !cert.sinItems && cert.aptos > 0 && !apto;
+                            const bc = apto ? "#16a34a" : parcial ? "#a16207" : G.border;
+                            const tc = apto ? "#22c55e" : parcial ? "#eab308" : G.textMuted;
+                            const bg = apto ? "#052e16" : parcial ? "#1c1a02" : G.surface2;
+                            return (
+                              <div key={d} style={{ minWidth: 70, background: G.surface, border: `2px solid ${bc}`, borderRadius: 10, padding: "7px 7px 5px", textAlign: "center", flexShrink: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: G.accent, marginBottom: 4 }}>Dto {d}</div>
+                                {!cert.sinItems && (
+                                  <div style={{ height: 3, background: G.border, borderRadius: 2, marginBottom: 4, overflow: "hidden" }}>
+                                    <div style={{ height: "100%", borderRadius: 2, width: `${cert.pct}%`, background: tc }} />
+                                  </div>
+                                )}
+                                <div style={{ fontSize: 10, fontFamily: G.mono, color: tc, marginBottom: 4 }}>
+                                  {cert.sinItems ? "—" : `${cert.aptos}/${cert.total}`}
                                 </div>
-                              )}
-                              <div style={{ fontSize: 10, fontFamily: G.mono, color: tc, marginBottom: 4 }}>
-                                {cert.sinItems ? "—" : `${cert.aptos}/${cert.total}`}
+                                <div style={{ fontSize: 9, fontWeight: 700, color: tc, background: bg, border: `1px solid ${bc}`, borderRadius: 5, padding: "2px 4px" }}>
+                                  {cert.sinItems ? "S/I" : apto ? "✅ APTO" : parcial ? "⏳ PARCIAL" : "⛔ SIN R2"}
+                                </div>
                               </div>
-                              <div style={{ fontSize: 9, fontWeight: 700, color: tc, background: bg, border: `1px solid ${bc}`, borderRadius: 5, padding: "2px 4px" }}>
-                                {cert.sinItems ? "S/I" : apto ? "✅ APTO" : parcial ? "⏳ PARCIAL" : "⛔ SIN R2"}
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
