@@ -1647,16 +1647,6 @@ function VistaInforme({ registros }) {
 
   function descargarPDF() { window.print(); }
 
-  if (pendientes.length === 0) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 16 }}>
-        <div style={{ fontSize: 64 }}>✅</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#4ade80", textAlign: "center" }}>Todos los ítems verificados</div>
-        <div style={{ fontSize: 14, color: G.textMuted, textAlign: "center" }}>Certificación habilitada</div>
-      </div>
-    );
-  }
-
   // Agrupar: Piso → Depto → Fase → Rubro
   const grupos = {};
   pendientes.forEach(({ fase, rubro, piso, depto, item, vigente }) => {
@@ -1708,6 +1698,20 @@ function VistaInforme({ registros }) {
         </div>
       </div>
 
+      {/* Mensaje cuando el filtro no arroja resultados */}
+      {pendientes.length === 0 && (
+        <div style={{ margin: "32px 16px", background: G.surface, border: `1px solid ${G.border}`, borderRadius: 12, padding: 28, textAlign: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: G.textDim, marginBottom: 6 }}>
+            Sin ítems para mostrar con este filtro
+          </div>
+          <div style={{ fontSize: 13, color: G.textMuted }}>
+            No hay {filtroTipo === "NO_VERIFICA" ? "No Verifica" : filtroTipo === "VERIFICA_OBS" ? "Verifica con Observaciones" : "pendientes"} en la selección actual.
+            Cambiá los filtros para ver otros ítems.
+          </div>
+        </div>
+      )}
+
       {/* Encabezado para impresión */}
       <div className="print-only" style={{ padding: "16px 24px 0", display: "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "2px solid #ccc", paddingBottom: 16 }}>
@@ -1724,7 +1728,7 @@ function VistaInforme({ registros }) {
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px 0" }}>
+      {pendientes.length > 0 && <div style={{ padding: "12px 16px 0" }}>
         {Object.keys(grupos).sort((a, b) => a - b).map(piso => (
           <div key={piso} style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: G.accent, letterSpacing: 1, padding: "8px 12px", background: G.surface, borderRadius: "8px 8px 0 0", border: `1px solid ${G.border}`, borderBottom: "none" }}>
@@ -1779,7 +1783,7 @@ function VistaInforme({ registros }) {
             ))}
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
