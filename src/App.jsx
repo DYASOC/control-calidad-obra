@@ -31,9 +31,9 @@ const USUARIOS = [
 // Relevamientos permitidos por rol
 const RELEV_POR_ROL = {
   "Obra":            ["R0", "R1"],
-  "Coordinador":     ["R0", "R1", "R2"],
+  "Coordinador":     ["R2"],
   "Oficina Técnica": ["R0", "R1", "R2"],
-  "Gerencia":        ["R0", "R1", "R2"],
+  "Gerencia":        ["R2"],
 };
 
 // ─── FASES Y RUBROS ───────────────────────────────────────────────────────────
@@ -984,6 +984,114 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
 }
 
 // ─── HISTORIAL INLINE ─────────────────────────────────────────────────────────
+function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registros, usuario, onGuardar, onClose }) {
+  const item = TODOS_ITEMS.find(i => i.id === itemId);
+  const relevPermitidos = RELEV_POR_ROL[usuario.rol] || [];
+  const datoOriginal = getItemData(registroOriginal, itemId);
+  const [estado, setEstado]   = useState(datoOriginal?.estado || "");
+  const [obs, setObs]         = useState(datoOriginal?.obs || "");
+  const [relev, setRelev]     = useState(registroOriginal.relevamiento || relevPermitidos[0] || "R0");
+  const [guardando, setGuard] = useState(false);
+  const [error, setError]     = useState("");
+
+  const needsObs = estado === "NO_VERIFICA" || estado === "VERIFICA_OBS";
+  const obsVacia = needsObs && !obs.trim();
+
+  async function guardar() {
+    if (!estado) { setError("Seleccioná un estado"); return; }
+    if (obsVacia) { setError("La observación es obligatoria para este estado"); return; }
+    setGuard(true); setError("");
+    // Nuevo registro con solo el ítem corregido
+    const registro = {
+      id: uid(), piso, depto, relevamiento: relev, fase: faseId,
+      responsable: usuario.nombre, rol: usuario.rol,
+      fecha: new Date().toISOString(),
+      items: { [String(itemId)]: { estado, obs: obs.trim() } },
+      anulado: false, esCorrección: true, corrigenA: registroOriginal.id,
+    };
+    try {
+      // Anular solo el registro original que contiene este ítem
+      await anularRegistro(registroOriginal.id);
+      await insertarRegistro(registro);
+      onGuardar();
+      onClose();
+    } catch (e) {
+      setError("Error al guardar. Intentá de nuevo.");
+      setGuard(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 12, background: "#1c1200", border: "1px solid #92400e", borderRadius: 10, padding: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", marginBottom: 10, letterSpacing: .5 }}>
+        ✏️ CORREGIR ERROR — #{itemId} · {item?.desc}
+      </div>
+      <div style={{ fontSize: 11, color: "#d97706", marginBottom: 10 }}>
+        Registro original: {registroOriginal.relevamiento} · {formatFecha(registroOriginal.fecha)} · {registroOriginal.responsable}
+      </div>
+
+      {/* Relevamiento */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>Relevamiento correcto</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+          {RELEVAMIENTOS_TODOS.map(r => {
+            const hab = relevPermitidos.includes(r);
+            return (
+              <button key={r} onClick={() => hab && setRelev(r)} style={{
+                padding: "8px 0", borderRadius: 8, fontWeight: 700, fontSize: 16,
+                border: `2px solid ${relev === r ? "#f97316" : "#1e2330"}`,
+                background: relev === r ? "#1c1200" : "#111318",
+                color: relev === r ? "#f97316" : hab ? "#6b7280" : "#374151",
+                opacity: hab ? 1 : .35, cursor: hab ? "pointer" : "not-allowed",
+              }}>{r}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Estado */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>Estado correcto</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+          {Object.entries(ESTADOS).map(([k, e]) => (
+            <button key={k} onClick={() => { setEstado(k); setError(""); }} style={{
+              padding: "10px 4px", borderRadius: 8, fontWeight: 700, fontSize: 11,
+              border: `2px solid ${estado === k ? e.color : G.border}`,
+              background: estado === k ? e.bg : G.surface2,
+              color: estado === k ? e.color : G.textMuted,
+            }}>{e.short}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Observación */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>
+          Observación {needsObs ? "(obligatoria)" : "(opcional)"}
+        </div>
+        <textarea value={obs} onChange={e => { setObs(e.target.value); setError(""); }}
+          placeholder="Describí el error de carga o la corrección"
+          style={{ borderColor: obsVacia && error ? "#b91c1c" : "#92400e", background: "#0a0800", color: "#e8eaf0" }} />
+      </div>
+
+      {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 8 }}>⚠ {error}</div>}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={guardar} disabled={guardando} style={{
+          flex: 1, padding: "10px", borderRadius: 8, border: "none",
+          background: guardando ? "#92400e88" : "#92400e", color: "#fff", fontWeight: 700, fontSize: 13,
+        }}>
+          {guardando ? "Corrigiendo…" : "Guardar corrección"}
+        </button>
+        <button onClick={onClose} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #92400e", background: "none", color: "#fbbf24", fontSize: 13 }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 function MiniActualizador({ piso, depto, itemId, faseId, registros, usuario, onGuardar, onClose }) {
   const item = TODOS_ITEMS.find(i => i.id === itemId);
   const relevPermitidos = RELEV_POR_ROL[usuario.rol] || [];
@@ -1092,6 +1200,7 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
   const item = TODOS_ITEMS.find(i => i.id === itemId);
   const historial = getHistorial(registros, piso, depto, itemId);
   const [modoActualizar, setModoActualizar] = useState(false);
+  const [modoCorregir, setModoCorregir]     = useState(null);
 
   return (
     <div style={{ background: G.surface2, border: `1px solid ${G.accent}`, borderRadius: 10, padding: 14, marginTop: 8 }}>
@@ -1108,28 +1217,39 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
       {historial.length === 0 && <div style={{ color: G.textMuted, fontSize: 12, marginBottom: 10 }}>Sin relevamientos registrados</div>}
       {historial.map(r => {
         const d = getItemData(r, itemId);
+        const esEsteCorrigiendo = modoCorregir?.id === r.id;
         return (
-          <div key={r.id} style={{ borderLeft: `3px solid ${r.anulado ? G.border : ESTADOS[d?.estado]?.border || G.border}`, paddingLeft: 10, marginBottom: 10, opacity: r.anulado ? .4 : 1 }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              <span style={{ fontFamily: G.mono, fontWeight: 700, fontSize: 12, color: G.accent }}>{r.relevamiento}</span>
-              <EstadoBadge estado={d?.estado} />
-              {r.anulado && <span style={{ background: "#3f0a0a", color: "#ef4444", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ANULADO</span>}
-              {r.esCorrección && <span style={{ background: "#1c1a00", color: "#fbbf24", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>CORRECCIÓN</span>}
-              {r.esActualizacion && <span style={{ background: "#052e16", color: "#4ade80", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ACTUALIZACIÓN</span>}
+          <div key={r.id}>
+            <div style={{ borderLeft: `3px solid ${r.anulado ? G.border : ESTADOS[d?.estado]?.border || G.border}`, paddingLeft: 10, marginBottom: esEsteCorrigiendo ? 4 : 10, opacity: r.anulado ? .4 : 1 }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontFamily: G.mono, fontWeight: 700, fontSize: 12, color: G.accent }}>{r.relevamiento}</span>
+                <EstadoBadge estado={d?.estado} />
+                {r.anulado && <span style={{ background: "#3f0a0a", color: "#ef4444", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ANULADO</span>}
+                {r.esCorrección && <span style={{ background: "#1c1a00", color: "#fbbf24", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>CORRECCIÓN</span>}
+                {r.esActualizacion && <span style={{ background: "#052e16", color: "#4ade80", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ACTUALIZACIÓN</span>}
+              </div>
+              <div style={{ fontSize: 11, color: G.textMuted, marginTop: 2 }}>{formatFecha(r.fecha)} · {r.responsable}</div>
+              {d?.obs && <div style={{ fontSize: 12, color: G.textDim, marginTop: 3, fontStyle: "italic" }}>"{d.obs}"</div>}
+              {!r.anulado && !r.esActualizacion && (
+                <button onClick={() => { setModoCorregir(esEsteCorrigiendo ? null : r); setModoActualizar(false); }}
+                  style={{ marginTop: 6, padding: "4px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface, color: G.textDim, fontSize: 11 }}>
+                  ✏️ Corregir error de carga
+                </button>
+              )}
             </div>
-            <div style={{ fontSize: 11, color: G.textMuted, marginTop: 2 }}>{formatFecha(r.fecha)} · {r.responsable}</div>
-            {d?.obs && <div style={{ fontSize: 12, color: G.textDim, marginTop: 3, fontStyle: "italic" }}>"{d.obs}"</div>}
-            {!r.anulado && !r.esActualizacion && (
-              <button onClick={() => { setPrefill({ ...r }); setVista("form"); onClose(); }} style={{ marginTop: 6, padding: "4px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface, color: G.textDim, fontSize: 11 }}>
-                ✏️ Corregir error
-              </button>
+            {esEsteCorrigiendo && (
+              <MiniCorrector
+                piso={piso} depto={depto} itemId={itemId} faseId={faseId}
+                registroOriginal={r} registros={registros} usuario={usuario}
+                onGuardar={onGuardar} onClose={() => setModoCorregir(null)}
+              />
             )}
           </div>
         );
       })}
 
-      {/* Botones de acción */}
-      {!modoActualizar && (
+      {/* Botón actualizar estado */}
+      {!modoActualizar && !modoCorregir && (
         <button onClick={() => setModoActualizar(true)} style={{
           width: "100%", marginTop: 4, padding: "10px", borderRadius: 8,
           border: "1px solid #16a34a", background: "#052e16",
@@ -1139,7 +1259,6 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
         </button>
       )}
 
-      {/* Mini formulario de actualización */}
       {modoActualizar && (
         <MiniActualizador
           piso={piso} depto={depto} itemId={itemId} faseId={faseId}
@@ -1262,21 +1381,32 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                             return (
                               <>
                                 <tr key={item.id}>
-                                  <td style={{ fontSize: 11, color: G.textDim, paddingRight: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingBottom: 3, maxWidth: ITEM_COL_W }}>
-                                    <span style={{ fontFamily: G.mono, fontSize: 9, color: G.textMuted, marginRight: 4 }}>#{item.id}</span>
-                                    {item.local !== "GENERAL" && <span style={{ color: G.textMuted, marginRight: 3 }}>[{item.local}]</span>}
-                                    {item.desc}
+                                  <td style={{ fontSize: 11, color: G.textDim, paddingRight: 8, paddingBottom: 3, maxWidth: ITEM_COL_W }}>
+                                    <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
+                                      <span style={{ fontFamily: G.mono, fontSize: 8, color: G.textMuted, flexShrink: 0 }}>#{item.id}</span>
+                                      <span style={{ fontSize: 8, color: G.accent, fontWeight: 700, flexShrink: 0, textTransform: "uppercase", letterSpacing: .3 }}>{item.tipo}</span>
+                                      {item.local !== "GENERAL" && <span style={{ fontSize: 8, background: G.surface2, border: `1px solid ${G.border}`, borderRadius: 3, padding: "0 4px", color: G.textDim, flexShrink: 0 }}>{item.local}</span>}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: G.textDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.desc}</div>
                                   </td>
                                   {deptos.map(d => {
                                     const vigente = getEstadoVigente(registros, piso, d, item.id, fase.id);
                                     const eKey = vigente?.estado || "PENDIENTE";
                                     const e = ESTADOS[eKey];
                                     const apto = getAptoCertificar(registros, piso, d, item.id, fase.id);
+                                    // Punto naranja: tuvo NV vigente (no anulado por error de carga) y hoy no está en NV
+                                    const tuvoNV = registros.some(r =>
+                                      r.piso === piso && r.depto === d &&
+                                      r.fase === fase.id &&
+                                      getItemData(r, item.id)?.estado === "NO_VERIFICA" &&
+                                      !r.anulado &&
+                                      !r.esCorrección  // excluye correcciones de error de carga
+                                    );
                                     const cellKey = `${piso}-${d}-${item.id}-${fase.id}`;
                                     const isSelected = sel === cellKey;
                                     return (
                                       <td key={d} onClick={() => handleCelda(piso, d, item.id, fase.id)}
-                                        title={`${e.label}${vigente?.obs ? ": " + vigente.obs : ""}${apto ? " ✅ R2" : ""}`}
+                                        title={`${e.label}${vigente?.obs ? ": " + vigente.obs : ""}${apto ? " ✅ R2" : ""}${tuvoNV && eKey !== "NO_VERIFICA" ? " ⚠ Tuvo No Verifica anterior" : ""}`}
                                         style={{
                                           width: CELL_W, height: CELL_W, minWidth: CELL_W,
                                           background: isSelected ? e.color + "55" : e.bg,
@@ -1286,6 +1416,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                         }}>
                                         {e.short}
                                         {apto && <span style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: "50%", background: "#22c55e", border: "2px solid #0a0c10" }} />}
+                                        {tuvoNV && eKey !== "NO_VERIFICA" && <span style={{ position: "absolute", bottom: -3, left: -3, width: 9, height: 9, borderRadius: "50%", background: "#f97316", border: "2px solid #0a0c10" }} />}
                                       </td>
                                     );
                                   })}
@@ -1473,6 +1604,7 @@ function VistaCertificaciones({ registros, setVista }) {
 function VistaInforme({ registros }) {
   const [filtroFase, setFiltroFase]   = useState("TODAS");
   const [filtroRubro, setFiltroRubro] = useState("TODOS");
+  const [filtroTipo, setFiltroTipo]   = useState("TODOS"); // TODOS | NO_VERIFICA | VERIFICA_OBS
   const todosPendientes = useMemo(() => {
     const result = [];
     FASES.forEach(fase => {
@@ -1498,6 +1630,7 @@ function VistaInforme({ registros }) {
     return todosPendientes.filter(p => {
       if (filtroFase !== "TODAS" && p.fase.id !== filtroFase) return false;
       if (filtroRubro !== "TODOS" && p.rubro.id !== filtroRubro) return false;
+      if (filtroTipo !== "TODOS" && p.vigente.estado !== filtroTipo) return false;
       return true;
     });
   }, [todosPendientes, filtroFase, filtroRubro]);
@@ -1544,6 +1677,20 @@ function VistaInforme({ registros }) {
             <span style={{ marginLeft: 4 }}>de {todosPendientes.length} ítems pendientes</span>
           </div>
           <button onClick={descargarPDF} style={{ padding: "8px 16px", borderRadius: 8, background: G.accent, border: "none", color: "#fff", fontWeight: 600, fontSize: 13 }}>📄 PDF</button>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          {[
+            { val: "TODOS",       label: "Todos",                    color: G.textMuted,  bg: G.surface2,  border: G.border },
+            { val: "NO_VERIFICA", label: "⛔ No Verifica",           color: "#ef4444",    bg: "#2d0a0a",   border: "#b91c1c" },
+            { val: "VERIFICA_OBS",label: "⚠ Verifica c/Obs",        color: "#eab308",    bg: "#1c1a02",   border: "#a16207" },
+          ].map(({ val, label, color, bg, border }) => (
+            <button key={val} onClick={() => setFiltroTipo(val)} style={{
+              padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              border: `2px solid ${filtroTipo === val ? color : border}`,
+              background: filtroTipo === val ? bg : G.surface2,
+              color: filtroTipo === val ? color : G.textMuted,
+            }}>{label}</button>
+          ))}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <select value={filtroFase} onChange={e => { setFiltroFase(e.target.value); setFiltroRubro("TODOS"); }}
