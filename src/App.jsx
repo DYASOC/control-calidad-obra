@@ -984,19 +984,128 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
 }
 
 // ─── HISTORIAL INLINE ─────────────────────────────────────────────────────────
-function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, setVista, onClose }) {
+function MiniActualizador({ piso, depto, itemId, faseId, registros, usuario, onGuardar, onClose }) {
+  const item = TODOS_ITEMS.find(i => i.id === itemId);
+  const relevPermitidos = RELEV_POR_ROL[usuario.rol] || [];
+  const [estado, setEstado]   = useState("");
+  const [obs, setObs]         = useState("");
+  const [relev, setRelev]     = useState(relevPermitidos[relevPermitidos.length - 1] || "R0");
+  const [guardando, setGuard] = useState(false);
+  const [error, setError]     = useState("");
+
+  const needsObs = estado === "NO_VERIFICA" || estado === "VERIFICA_OBS";
+  const obsVacia = needsObs && !obs.trim();
+
+  async function guardar() {
+    if (!estado) { setError("Seleccioná un estado"); return; }
+    if (obsVacia) { setError("La observación es obligatoria para este estado"); return; }
+    setGuard(true); setError("");
+    const registro = {
+      id: uid(), piso, depto, relevamiento: relev, fase: faseId,
+      responsable: usuario.nombre, rol: usuario.rol,
+      fecha: new Date().toISOString(),
+      items: { [String(itemId)]: { estado, obs: obs.trim() } },
+      anulado: false, esCorrección: false, corrigenA: null,
+      esActualizacion: true,
+    };
+    try {
+      await insertarRegistro(registro);
+      onGuardar();
+      onClose();
+    } catch (e) {
+      setError("Error al guardar. Intentá de nuevo.");
+      setGuard(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 12, background: "#052e16", border: "1px solid #16a34a", borderRadius: 10, padding: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#4ade80", marginBottom: 10, letterSpacing: .5 }}>
+        ✏️ ACTUALIZAR ESTADO — #{itemId} · {item?.desc}
+      </div>
+
+      {/* Relevamiento */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#86efac", marginBottom: 6 }}>Relevamiento</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+          {RELEVAMIENTOS_TODOS.map(r => {
+            const hab = relevPermitidos.includes(r);
+            return (
+              <button key={r} onClick={() => hab && setRelev(r)} style={{
+                padding: "8px 0", borderRadius: 8, fontWeight: 700, fontSize: 16,
+                border: `2px solid ${relev === r ? "#22c55e" : hab ? "#1e2330" : "#1e2330"}`,
+                background: relev === r ? "#052e16" : "#111318",
+                color: relev === r ? "#22c55e" : hab ? "#6b7280" : "#374151",
+                opacity: hab ? 1 : .35, cursor: hab ? "pointer" : "not-allowed",
+              }}>{r}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Estado */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#86efac", marginBottom: 6 }}>Nuevo estado</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+          {Object.entries(ESTADOS).map(([k, e]) => (
+            <button key={k} onClick={() => { setEstado(k); setError(""); }} style={{
+              padding: "10px 4px", borderRadius: 8, fontWeight: 700, fontSize: 11,
+              border: `2px solid ${estado === k ? e.color : G.border}`,
+              background: estado === k ? e.bg : G.surface2,
+              color: estado === k ? e.color : G.textMuted,
+            }}>{e.short}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Observación */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#86efac", marginBottom: 6 }}>
+          Motivo / observación {needsObs ? "(obligatorio)" : "(opcional — recomendado)"}
+        </div>
+        <textarea
+          value={obs}
+          onChange={e => { setObs(e.target.value); setError(""); }}
+          placeholder={needsObs ? "Describí el motivo del cambio de estado" : "Ej: Corregido por subcontratista — muro aplomado"}
+          style={{ borderColor: obsVacia && error ? "#b91c1c" : "#16a34a", background: "#0a1a0a", color: "#e8eaf0" }}
+        />
+      </div>
+
+      {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 8 }}>⚠ {error}</div>}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={guardar} disabled={guardando} style={{
+          flex: 1, padding: "10px", borderRadius: 8, border: "none",
+          background: guardando ? "#16a34a88" : "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13,
+        }}>
+          {guardando ? "Guardando…" : "Guardar actualización"}
+        </button>
+        <button onClick={onClose} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #16a34a", background: "none", color: "#4ade80", fontSize: 13 }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, setVista, onClose, onGuardar, usuario }) {
   const item = TODOS_ITEMS.find(i => i.id === itemId);
   const historial = getHistorial(registros, piso, depto, itemId);
+  const [modoActualizar, setModoActualizar] = useState(false);
+
   return (
     <div style={{ background: G.surface2, border: `1px solid ${G.accent}`, borderRadius: 10, padding: 14, marginTop: 8 }}>
+      {/* Encabezado */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 10, color: G.textMuted, fontFamily: G.mono }}>Piso {piso} · Dto {depto} · #{itemId}</div>
+          <div style={{ fontSize: 10, color: G.textMuted, fontFamily: G.mono }}>Piso {piso} · Dto {depto} · #{itemId} · {faseId}</div>
           <div style={{ fontSize: 13, fontWeight: 600, color: G.text, marginTop: 2 }}>{item?.desc}</div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", color: G.textMuted, fontSize: 18, padding: "0 4px" }}>×</button>
       </div>
-      {historial.length === 0 && <div style={{ color: G.textMuted, fontSize: 12 }}>Sin relevamientos</div>}
+
+      {/* Historial */}
+      {historial.length === 0 && <div style={{ color: G.textMuted, fontSize: 12, marginBottom: 10 }}>Sin relevamientos registrados</div>}
       {historial.map(r => {
         const d = getItemData(r, itemId);
         return (
@@ -1006,23 +1115,44 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
               <EstadoBadge estado={d?.estado} />
               {r.anulado && <span style={{ background: "#3f0a0a", color: "#ef4444", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ANULADO</span>}
               {r.esCorrección && <span style={{ background: "#1c1a00", color: "#fbbf24", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>CORRECCIÓN</span>}
+              {r.esActualizacion && <span style={{ background: "#052e16", color: "#4ade80", fontSize: 10, padding: "1px 6px", borderRadius: 10 }}>ACTUALIZACIÓN</span>}
             </div>
             <div style={{ fontSize: 11, color: G.textMuted, marginTop: 2 }}>{formatFecha(r.fecha)} · {r.responsable}</div>
             {d?.obs && <div style={{ fontSize: 12, color: G.textDim, marginTop: 3, fontStyle: "italic" }}>"{d.obs}"</div>}
-            {!r.anulado && (
+            {!r.anulado && !r.esActualizacion && (
               <button onClick={() => { setPrefill({ ...r }); setVista("form"); onClose(); }} style={{ marginTop: 6, padding: "4px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface, color: G.textDim, fontSize: 11 }}>
-                ✏️ Corregir
+                ✏️ Corregir error
               </button>
             )}
           </div>
         );
       })}
+
+      {/* Botones de acción */}
+      {!modoActualizar && (
+        <button onClick={() => setModoActualizar(true)} style={{
+          width: "100%", marginTop: 4, padding: "10px", borderRadius: 8,
+          border: "1px solid #16a34a", background: "#052e16",
+          color: "#4ade80", fontWeight: 600, fontSize: 13,
+        }}>
+          ✅ Actualizar estado de este ítem
+        </button>
+      )}
+
+      {/* Mini formulario de actualización */}
+      {modoActualizar && (
+        <MiniActualizador
+          piso={piso} depto={depto} itemId={itemId} faseId={faseId}
+          registros={registros} usuario={usuario}
+          onGuardar={onGuardar} onClose={() => setModoActualizar(false)}
+        />
+      )}
     </div>
   );
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
-function VistaDashboard({ registros, setPrefill, setVista }) {
+function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario }) {
   const [piso, setPiso]         = useState(1);
   const [faseOpen, setFaseOpen] = useState({ F1: true });
   const [rubroOpen, setRubroOpen] = useState({});
@@ -1168,6 +1298,7 @@ function VistaDashboard({ registros, setPrefill, setVista }) {
                                         itemId={selParsed.itemId} faseId={selParsed.faseId}
                                         registros={registros} setPrefill={setPrefill} setVista={setVista}
                                         onClose={() => setSel(null)}
+                                        onGuardar={onGuardar} usuario={usuario}
                                       />
                                     </td>
                                   </tr>
@@ -1636,7 +1767,7 @@ export default function App() {
         <NavBar vista={vista} setVista={setVista} usuario={usuario} onLogout={handleLogout} tema={tema} toggleTema={toggleTema} T={T} />
         <BarraSync syncOk={syncOk} guardando={guardando} ultimaSync={ultimaSync} onActualizar={cargar} T={T} />
         {vista === "form"    && <VistaFormulario onGuardar={onGuardar} prefill={prefill} setPrefill={setPrefill} usuario={usuario} T={T} />}
-        {vista === "dash"    && <VistaDashboard registros={registros} setPrefill={setPrefill} setVista={setVista} T={T} />}
+        {vista === "dash"    && <VistaDashboard registros={registros} setPrefill={setPrefill} setVista={setVista} T={T} onGuardar={onGuardar} usuario={usuario} />}
         {vista === "cert"    && <VistaCertificaciones registros={registros} setVista={setVista} T={T} />}
         {vista === "informe" && <VistaInforme registros={registros} T={T} />}
         {vista === "admin"   && usuario?.admin && <VistaAdmin usuarios={usuarios} setUsuarios={setUsuarios} T={T} />}
