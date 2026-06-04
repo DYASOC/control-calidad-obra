@@ -1633,7 +1633,7 @@ function VistaInforme({ registros }) {
       if (filtroTipo !== "TODOS" && p.vigente.estado !== filtroTipo) return false;
       return true;
     });
-  }, [todosPendientes, filtroFase, filtroRubro]);
+  }, [todosPendientes, filtroFase, filtroRubro, filtroTipo]);
 
   // Rubros disponibles según fase seleccionada
   const rubrosDisponibles = useMemo(() => {
