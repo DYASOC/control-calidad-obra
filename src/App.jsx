@@ -30,10 +30,10 @@ const USUARIOS = [
 
 // Relevamientos permitidos por rol
 const RELEV_POR_ROL = {
-  "Obra":            ["R0", "R1"],
-  "Coordinador":     ["R2"],
-  "Oficina Técnica": ["R0", "R1", "R2"],
-  "Gerencia":        ["R2"],
+  "Obra":            ["RP"],
+  "Coordinador":     ["RF"],
+  "Oficina Técnica": ["RP", "RF"],
+  "Gerencia":        ["RF"],
 };
 
 // ─── FASES Y RUBROS ───────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ const ESTADOS = {
   PENDIENTE:    { label: "Pendiente",      short: "P",  color: "#6b7280", bg: "#111827", border: "#374151" },
 };
 
-const RELEVAMIENTOS_TODOS = ["R0", "R1", "R2"];
+const RELEVAMIENTOS_TODOS = ["RP", "RF"];
 const MAX_REINTENTOS = 3;
 const DELAY_REINTENTO = 2000;
 
@@ -234,16 +234,25 @@ function formatFecha(iso) {
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+function normalizarRelevamiento(r) {
+  // Migración: R0 y R1 → RP, R2 → RF
+  if (r === "R0" || r === "R1") return "RP";
+  if (r === "R2") return "RF";
+  return r;
+}
+
 function normalizarRegistro(row) {
   return {
     id: row.id, piso: row.piso, depto: row.depto,
-    relevamiento: row.relevamiento, responsable: row.responsable,
+    relevamiento: normalizarRelevamiento(row.relevamiento),
+    responsable: row.responsable,
     rol: row.rol, fecha: row.fecha,
     fase: row.fase || "F1",
     items: typeof row.items === "string" ? JSON.parse(row.items) : (row.items || {}),
     anulado: row.anulado ?? false,
     esCorrección: row.es_correccion ?? false,
     corrigenA: row.corrigen_a ?? null,
+    esActualizacion: row.es_actualizacion ?? false,
   };
 }
 
@@ -264,7 +273,7 @@ function getEstadoVigente(registros, piso, depto, itemId, fase) {
 
 function getAptoCertificar(registros, piso, depto, itemId, fase) {
   const v = getEstadoVigente(registros, piso, depto, itemId, fase);
-  return v?.relevamiento === "R2" && v?.estado === "VERIFICA";
+  return v?.relevamiento === "RF" && v?.estado === "VERIFICA";
 }
 
 function getCertRubro(registros, piso, depto, rubro, faseId) {
@@ -616,7 +625,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   const [relev, setRelev]   = useState(() => {
     const saved = borradorInicial?.relev || prefill?.relevamiento;
     if (saved && relevPermitidos.includes(saved)) return saved;
-    return relevPermitidos[0] || "R0";
+    return relevPermitidos[0] || "RP";
   });
   const [rubrosOpen, setRubrosOpen] = useState({});
   const [itemsForm, setItemsForm]   = useState(() => {
@@ -651,7 +660,16 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   }
 
   function setItemEstado(itemId, est) {
-    setItemsForm(prev => ({ ...prev, [String(itemId)]: { estado: est, obs: prev[String(itemId)]?.obs || "" } }));
+    if (est === null) {
+      // Destildar — quitar el ítem del formulario (quedará como sin marcar = gris en dashboard)
+      setItemsForm(prev => {
+        const next = { ...prev };
+        delete next[String(itemId)];
+        return next;
+      });
+    } else {
+      setItemsForm(prev => ({ ...prev, [String(itemId)]: { estado: est, obs: prev[String(itemId)]?.obs || "" } }));
+    }
   }
   function setItemObs(itemId, obs) {
     setItemsForm(prev => ({ ...prev, [String(itemId)]: { ...prev[String(itemId)], obs } }));
@@ -716,7 +734,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   }
 
   const contados = useMemo(() => {
-    const c = { VERIFICA: 0, VERIFICA_OBS: 0, NO_VERIFICA: 0, PENDIENTE: 0, sin: 0 };
+    const c = { VERIFICA: 0, VERIFICA_OBS: 0, NO_VERIFICA: 0, sin: 0 };
     const itemsFase = faseSeleccionada?.rubros.flatMap(r => r.items) || [];
     itemsFase.forEach(item => {
       const e = itemsForm[String(item.id)]?.estado;
@@ -827,8 +845,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
             { k: "VERIFICA", lbl: "V", col: "#22c55e" },
             { k: "VERIFICA_OBS", lbl: "VO", col: "#eab308" },
             { k: "NO_VERIFICA", lbl: "NV", col: "#ef4444" },
-            { k: "PENDIENTE", lbl: "P", col: "#6b7280" },
-            { k: "sin", lbl: "Sin", col: "#374151" },
+            { k: "sin", lbl: "Sin marcar", col: "#374151" },
           ].map(({ k, lbl, col }) => (
             <div key={k} style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: col, fontFamily: G.mono }}>{contados[k]}</div>
@@ -901,16 +918,19 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
                           </>}
                         </div>
                         <div style={{ fontSize: 14, color: G.text, marginBottom: 10, lineHeight: 1.4 }}>{item.desc}</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-                          {Object.entries(ESTADOS).map(([k, e]) => (
-                            <button key={k} onClick={() => setItemEstado(item.id, k)} style={{
-                              padding: "10px 4px", borderRadius: 8,
-                              border: `2px solid ${curr?.estado === k ? e.color : G.border}`,
-                              background: curr?.estado === k ? e.bg : G.surface2,
-                              color: curr?.estado === k ? e.color : G.textMuted,
-                              fontSize: 11, fontWeight: 700,
-                            }}>{e.short}</button>
-                          ))}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                          {Object.entries(ESTADOS).filter(([k]) => k !== "PENDIENTE").map(([k, e]) => {
+                            const seleccionado = curr?.estado === k;
+                            return (
+                              <button key={k} onClick={() => seleccionado ? setItemEstado(item.id, null) : setItemEstado(item.id, k)} style={{
+                                padding: "12px 4px", borderRadius: 8,
+                                border: `2px solid ${seleccionado ? e.color : G.border}`,
+                                background: seleccionado ? e.bg : G.surface2,
+                                color: seleccionado ? e.color : G.textMuted,
+                                fontSize: 12, fontWeight: 700,
+                              }}>{e.short}</button>
+                            );
+                          })}
                         </div>
                         {needsObs && (
                           <textarea
@@ -990,7 +1010,7 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
   const datoOriginal = getItemData(registroOriginal, itemId);
   const [estado, setEstado]   = useState(datoOriginal?.estado || "");
   const [obs, setObs]         = useState(datoOriginal?.obs || "");
-  const [relev, setRelev]     = useState(registroOriginal.relevamiento || relevPermitidos[0] || "R0");
+  const [relev, setRelev]     = useState(registroOriginal.relevamiento || relevPermitidos[0] || "RP");
   const [guardando, setGuard] = useState(false);
   const [error, setError]     = useState("");
 
@@ -1097,7 +1117,7 @@ function MiniActualizador({ piso, depto, itemId, faseId, registros, usuario, onG
   const relevPermitidos = RELEV_POR_ROL[usuario.rol] || [];
   const [estado, setEstado]   = useState("");
   const [obs, setObs]         = useState("");
-  const [relev, setRelev]     = useState(relevPermitidos[relevPermitidos.length - 1] || "R0");
+  const [relev, setRelev]     = useState(relevPermitidos[relevPermitidos.length - 1] || "RP");
   const [guardando, setGuard] = useState(false);
   const [error, setError]     = useState("");
 
