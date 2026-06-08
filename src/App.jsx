@@ -263,7 +263,8 @@ function getItemData(registro, itemId) {
 function getEstadoVigente(registros, piso, depto, itemId, fase) {
   const relevantes = registros
     .filter(r => r.piso === piso && r.depto === depto && !r.anulado &&
-      (!fase || r.fase === fase) && getItemData(r, itemId))
+      (!fase || r.fase === fase) && getItemData(r, itemId) &&
+      getItemData(r, itemId)?.estado !== "ANULADO_ERROR") // ignorar errores de carga anulados
     .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   if (relevantes.length === 0) return null;
   const r = relevantes[0];
@@ -1021,16 +1022,24 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
     if (!estado) { setError("Seleccioná un estado"); return; }
     if (obsVacia) { setError("La observación es obligatoria para este estado"); return; }
     setGuard(true); setError("");
+    // Paso 1: marcar el ítem original como anulado por error (sin tocar el registro completo)
+    const anulacionError = {
+      id: uid(), piso, depto, relevamiento: registroOriginal.relevamiento, fase: faseId,
+      responsable: usuario.nombre, rol: usuario.rol,
+      fecha: new Date().toISOString(),
+      items: { [String(itemId)]: { estado: "ANULADO_ERROR", obs: "Anulado por corrección de error de carga" } },
+      anulado: false, esCorrección: true, corrigenA: registroOriginal.id,
+    };
+    // Paso 2: nueva entrada con el estado correcto
     const registro = {
       id: uid(), piso, depto, relevamiento: relev, fase: faseId,
       responsable: usuario.nombre, rol: usuario.rol,
-      fecha: new Date().toISOString(),
+      fecha: new Date(Date.now() + 1).toISOString(), // 1ms después para que sea el más reciente
       items: { [String(itemId)]: { estado, obs: obs.trim() } },
       anulado: false, esCorrección: true, corrigenA: registroOriginal.id,
     };
     try {
-      // No anulamos el registro original completo para no afectar los otros ítems del mismo relevamiento
-      // La corrección entra como entrada nueva y el sistema toma la más reciente por ítem
+      await insertarRegistro(anulacionError);
       await insertarRegistro(registro);
       onGuardar();
       onClose();
@@ -1233,8 +1242,8 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
       </div>
 
       {/* Historial */}
-      {historial.length === 0 && <div style={{ color: G.textMuted, fontSize: 12, marginBottom: 10 }}>Sin relevamientos registrados</div>}
-      {historial.map(r => {
+      {historial.filter(r => getItemData(r, itemId)?.estado !== "ANULADO_ERROR").length === 0 && <div style={{ color: G.textMuted, fontSize: 12, marginBottom: 10 }}>Sin relevamientos registrados</div>}
+      {historial.filter(r => getItemData(r, itemId)?.estado !== "ANULADO_ERROR").map(r => {
         const d = getItemData(r, itemId);
         const esEsteCorrigiendo = modoCorregir?.id === r.id;
         return (
@@ -1413,12 +1422,12 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                     const eKey = vigente?.estado || "PENDIENTE";
                                     const e = ESTADOS[eKey];
                                     const apto = getAptoCertificar(registros, piso, d, item.id, fase.id);
-                                    // Punto naranja: hubo NV real en algún momento para este ítem
-                                    // Incluye correcciones y anulados — lo que importa es que el NV existió
+                                    // Punto naranja: hubo NV real que no fue anulado por error de carga
                                     const tuvoNV = registros.some(r =>
                                       r.piso === piso && r.depto === d &&
                                       r.fase === fase.id &&
-                                      getItemData(r, item.id)?.estado === "NO_VERIFICA"
+                                      getItemData(r, item.id)?.estado === "NO_VERIFICA" &&
+                                      !r.anulado // si fue anulado por corrección de error, no cuenta
                                     );
                                     const cellKey = `${piso}-${d}-${item.id}-${fase.id}`;
                                     const isSelected = sel === cellKey;
