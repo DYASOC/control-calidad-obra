@@ -1021,7 +1021,8 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
     if (!estado) { setError("Seleccioná un estado"); return; }
     if (obsVacia) { setError("La observación es obligatoria para este estado"); return; }
     setGuard(true); setError("");
-    // Nuevo registro con solo el ítem corregido
+    // Genera una entrada nueva con solo ese ítem — NO anula el registro original completo
+    // El sistema toma siempre el registro más reciente por ítem, así el resto del relevamiento queda intacto
     const registro = {
       id: uid(), piso, depto, relevamiento: relev, fase: faseId,
       responsable: usuario.nombre, rol: usuario.rol,
@@ -1030,8 +1031,6 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
       anulado: false, esCorrección: true, corrigenA: registroOriginal.id,
     };
     try {
-      // Anular solo el registro original que contiene este ítem
-      await anularRegistro(registroOriginal.id);
       await insertarRegistro(registro);
       onGuardar();
       onClose();
@@ -1414,14 +1413,22 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                     const eKey = vigente?.estado || "PENDIENTE";
                                     const e = ESTADOS[eKey];
                                     const apto = getAptoCertificar(registros, piso, d, item.id, fase.id);
-                                    // Punto naranja: tuvo NV vigente (no anulado por error de carga) y hoy no está en NV
-                                    const tuvoNV = registros.some(r =>
-                                      r.piso === piso && r.depto === d &&
-                                      r.fase === fase.id &&
-                                      getItemData(r, item.id)?.estado === "NO_VERIFICA" &&
-                                      !r.anulado &&
-                                      !r.esCorrección  // excluye correcciones de error de carga
-                                    );
+                                    // Punto naranja: tuvo NV vigente en algún momento (no anulado por error)
+                                    // Aparece si hay alguna entrada con NV que no sea ella misma una corrección de error
+                                    // O si hay una corrección que corrigió un NV (el NV original existió realmente)
+                                    const tuvoNV = (() => {
+                                      // Buscar si hubo algún NV real para este ítem en este depto/piso/fase
+                                      const histItem = registros.filter(r =>
+                                        r.piso === piso && r.depto === d &&
+                                        r.fase === fase.id &&
+                                        getItemData(r, item.id)?.estado === "NO_VERIFICA"
+                                      );
+                                      // Si hay alguno que NO sea corrección de error = NV real
+                                      const nvReal = histItem.some(r => !r.esCorrección);
+                                      // O si hay correcciones que apuntan a un registro que tenía NV
+                                      const nvCorregido = histItem.some(r => r.esCorrección);
+                                      return nvReal || nvCorregido;
+                                    })();
                                     const cellKey = `${piso}-${d}-${item.id}-${fase.id}`;
                                     const isSelected = sel === cellKey;
                                     return (
@@ -1449,7 +1456,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                         itemId={selParsed.itemId} faseId={selParsed.faseId}
                                         registros={registros} setPrefill={setPrefill} setVista={setVista}
                                         onClose={() => setSel(null)}
-                                        onGuardar={onGuardar} usuario={usuario}
+                                        onGuardar={() => { onGuardar(); setSel(null); }} usuario={usuario}
                                       />
                                     </td>
                                   </tr>
