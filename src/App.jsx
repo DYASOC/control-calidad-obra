@@ -1422,13 +1422,28 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                     const eKey = vigente?.estado || "PENDIENTE";
                                     const e = ESTADOS[eKey];
                                     const apto = getAptoCertificar(registros, piso, d, item.id, fase.id);
-                                    // Punto naranja: hubo NV real que no fue anulado por error de carga
-                                    const tuvoNV = registros.some(r =>
-                                      r.piso === piso && r.depto === d &&
-                                      r.fase === fase.id &&
-                                      getItemData(r, item.id)?.estado === "NO_VERIFICA" &&
-                                      !r.anulado // si fue anulado por corrección de error, no cuenta
-                                    );
+                                    // Punto naranja: hubo NV real que no fue corregido como error de carga
+                                    // Un NV fue "error de carga" si existe una entrada ANULADO_ERROR posterior para ese ítem
+                                    const tuvoNV = (() => {
+                                      const nvsItem = registros.filter(r =>
+                                        r.piso === piso && r.depto === d &&
+                                        r.fase === fase.id && !r.anulado &&
+                                        getItemData(r, item.id)?.estado === "NO_VERIFICA"
+                                      );
+                                      if (nvsItem.length === 0) return false;
+                                      // Para cada NV, verificar si fue anulado por error de carga
+                                      // (existe una entrada ANULADO_ERROR con fecha posterior)
+                                      return nvsItem.some(nvReg => {
+                                        const fechaNV = new Date(nvReg.fecha);
+                                        const fueAnuladoPorError = registros.some(r =>
+                                          r.piso === piso && r.depto === d &&
+                                          r.fase === fase.id &&
+                                          getItemData(r, item.id)?.estado === "ANULADO_ERROR" &&
+                                          new Date(r.fecha) > fechaNV
+                                        );
+                                        return !fueAnuladoPorError;
+                                      });
+                                    })();
                                     const cellKey = `${piso}-${d}-${item.id}-${fase.id}`;
                                     const isSelected = sel === cellKey;
                                     return (
