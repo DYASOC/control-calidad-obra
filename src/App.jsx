@@ -1021,8 +1021,6 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
     if (!estado) { setError("Seleccioná un estado"); return; }
     if (obsVacia) { setError("La observación es obligatoria para este estado"); return; }
     setGuard(true); setError("");
-    // Genera una entrada nueva con solo ese ítem — NO anula el registro original completo
-    // El sistema toma siempre el registro más reciente por ítem, así el resto del relevamiento queda intacto
     const registro = {
       id: uid(), piso, depto, relevamiento: relev, fase: faseId,
       responsable: usuario.nombre, rol: usuario.rol,
@@ -1031,6 +1029,8 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
       anulado: false, esCorrección: true, corrigenA: registroOriginal.id,
     };
     try {
+      // No anulamos el registro original completo para no afectar los otros ítems del mismo relevamiento
+      // La corrección entra como entrada nueva y el sistema toma la más reciente por ítem
       await insertarRegistro(registro);
       onGuardar();
       onClose();
@@ -1413,22 +1413,13 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                     const eKey = vigente?.estado || "PENDIENTE";
                                     const e = ESTADOS[eKey];
                                     const apto = getAptoCertificar(registros, piso, d, item.id, fase.id);
-                                    // Punto naranja: tuvo NV vigente en algún momento (no anulado por error)
-                                    // Aparece si hay alguna entrada con NV que no sea ella misma una corrección de error
-                                    // O si hay una corrección que corrigió un NV (el NV original existió realmente)
-                                    const tuvoNV = (() => {
-                                      // Buscar si hubo algún NV real para este ítem en este depto/piso/fase
-                                      const histItem = registros.filter(r =>
-                                        r.piso === piso && r.depto === d &&
-                                        r.fase === fase.id &&
-                                        getItemData(r, item.id)?.estado === "NO_VERIFICA"
-                                      );
-                                      // Si hay alguno que NO sea corrección de error = NV real
-                                      const nvReal = histItem.some(r => !r.esCorrección);
-                                      // O si hay correcciones que apuntan a un registro que tenía NV
-                                      const nvCorregido = histItem.some(r => r.esCorrección);
-                                      return nvReal || nvCorregido;
-                                    })();
+                                    // Punto naranja: hubo NV real en algún momento para este ítem
+                                    // Incluye correcciones y anulados — lo que importa es que el NV existió
+                                    const tuvoNV = registros.some(r =>
+                                      r.piso === piso && r.depto === d &&
+                                      r.fase === fase.id &&
+                                      getItemData(r, item.id)?.estado === "NO_VERIFICA"
+                                    );
                                     const cellKey = `${piso}-${d}-${item.id}-${fase.id}`;
                                     const isSelected = sel === cellKey;
                                     return (
