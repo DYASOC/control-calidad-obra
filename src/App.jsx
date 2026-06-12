@@ -503,11 +503,12 @@ function VistaLogin({ onLogin, usuarios }) {
 }
 
 // ─── ADMIN DE USUARIOS ────────────────────────────────────────────────────────
-function VistaAdmin({ usuarios, setUsuarios }) {
+function VistaAdmin({ usuarios, setUsuarios, registros }) {
   const [editando, setEditando] = useState(null);
   const [form, setForm]         = useState({});
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg]           = useState("");
+  const [expandido, setExpandido] = useState(null);
 
   function abrirNuevo() {
     setForm({ id: uid(), nombre: "", rol: "Obra", admin: false, activo: true, pass: "ccobra2024" });
@@ -538,6 +539,19 @@ function VistaAdmin({ usuarios, setUsuarios }) {
       await guardarUsuario(actualizado);
       setUsuarios(prev => prev.map(x => x.id === u.id ? actualizado : x));
     } catch (e) { setMsg("Error: " + e.message); }
+  }
+
+  // Estadísticas de actividad por usuario
+  function getActividad(nombre) {
+    const propios = registros.filter(r => r.responsable === nombre);
+    const relevamientos = propios.filter(r => !r.esCorrección && !r.esActualizacion).length;
+    const actualizaciones = propios.filter(r => r.esActualizacion).length;
+    const correcciones = propios.filter(r => r.esCorrección).length;
+    const ultimaFecha = propios.length > 0
+      ? propios.reduce((max, r) => new Date(r.fecha) > new Date(max) ? r.fecha : max, propios[0].fecha)
+      : null;
+    const ultimos = [...propios].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 8);
+    return { total: propios.length, relevamientos, actualizaciones, correcciones, ultimaFecha, ultimos };
   }
 
   return (
@@ -593,20 +607,66 @@ function VistaAdmin({ usuarios, setUsuarios }) {
         </div>
       )}
 
-      {usuarios.map(u => (
-        <div key={u.id} style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10, opacity: u.activo ? 1 : .5 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: G.text }}>{u.nombre}</div>
-            <div style={{ fontSize: 11, color: G.textMuted, marginTop: 2 }}>
-              {u.rol}{u.admin ? " · Admin" : ""}{!u.activo ? " · Inactivo" : ""}
+      {usuarios.map(u => {
+        const act = getActividad(u.nombre);
+        const abierto = expandido === u.id;
+        return (
+        <div key={u.id} style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 10, marginBottom: 8, opacity: u.activo ? 1 : .5, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setExpandido(abierto ? null : u.id)}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: G.text, display: "flex", alignItems: "center", gap: 6 }}>
+                {u.nombre}
+                <span style={{ fontSize: 11, color: G.textMuted }}>{abierto ? "▾" : "▸"}</span>
+              </div>
+              <div style={{ fontSize: 11, color: G.textMuted, marginTop: 2 }}>
+                {u.rol}{u.admin ? " · Admin" : ""}{!u.activo ? " · Inactivo" : ""}
+                {act.total > 0 && <span style={{ marginLeft: 6, color: G.textDim }}>· {act.total} registros</span>}
+              </div>
             </div>
+            <button onClick={() => abrirEditar(u)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface2, color: G.textDim, fontSize: 12 }}>Editar</button>
+            <button onClick={() => toggleActivo(u)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface2, color: u.activo ? "#f87171" : "#4ade80", fontSize: 12 }}>
+              {u.activo ? "Desactivar" : "Activar"}
+            </button>
           </div>
-          <button onClick={() => abrirEditar(u)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface2, color: G.textDim, fontSize: 12 }}>Editar</button>
-          <button onClick={() => toggleActivo(u)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${G.border}`, background: G.surface2, color: u.activo ? "#f87171" : "#4ade80", fontSize: 12 }}>
-            {u.activo ? "Desactivar" : "Activar"}
-          </button>
+
+          {/* Panel de actividad expandible */}
+          {abierto && (
+            <div style={{ borderTop: `1px solid ${G.border}`, padding: "12px 14px", background: G.surface2 }}>
+              {act.total === 0 ? (
+                <div style={{ fontSize: 12, color: G.textMuted }}>Sin actividad registrada</div>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                    <div style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 8, padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: G.accent, fontFamily: G.mono }}>{act.relevamientos}</div>
+                      <div style={{ fontSize: 9, color: G.textMuted }}>Relevamientos</div>
+                    </div>
+                    <div style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 8, padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#4ade80", fontFamily: G.mono }}>{act.actualizaciones}</div>
+                      <div style={{ fontSize: 9, color: G.textMuted }}>Actualizaciones</div>
+                    </div>
+                    <div style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 8, padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#fbbf24", fontFamily: G.mono }}>{act.correcciones}</div>
+                      <div style={{ fontSize: 9, color: G.textMuted }}>Correcciones</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: G.textMuted, marginBottom: 8 }}>
+                    Última actividad: <span style={{ color: G.textDim, fontWeight: 600 }}>{formatFecha(act.ultimaFecha)}</span>
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: G.textMuted, letterSpacing: 1, marginBottom: 6 }}>ÚLTIMOS REGISTROS</div>
+                  {act.ultimos.map(r => (
+                    <div key={r.id} style={{ fontSize: 11, color: G.textDim, padding: "4px 0", borderBottom: `1px solid ${G.border}`, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>P{r.piso} {r.depto} · {r.fase} · {r.relevamiento}{r.esActualizacion ? " · Act." : r.esCorrección ? " · Corr." : ""}</span>
+                      <span style={{ color: G.textMuted, whiteSpace: "nowrap" }}>{formatFecha(r.fecha)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -818,19 +878,24 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
             {FASES.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
           </select>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+        <label style={{ fontSize: 12, color: G.textMuted, display: "block", marginBottom: 6 }}>Relevamiento</label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {RELEVAMIENTOS_TODOS.map(r => {
             const habilitado = relevPermitidos.includes(r);
+            const label = r === "RP" ? "Revisión Parcial" : "Revisión Final";
             return (
               <button key={r} onClick={() => habilitado && setRelev(r)} style={{
                 padding: "12px 0", borderRadius: 8,
-                border: `2px solid ${relev === r ? G.accent : habilitado ? G.border : G.border}`,
+                border: `2px solid ${relev === r ? G.accent : G.border}`,
                 background: relev === r ? G.accentDim : habilitado ? G.surface2 : G.surface,
                 color: relev === r ? G.accent : habilitado ? G.textDim : G.border,
-                fontWeight: 700, fontSize: 18,
                 cursor: habilitado ? "pointer" : "not-allowed",
                 opacity: habilitado ? 1 : .35,
-              }}>{r}</button>
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              }}>
+                <span style={{ fontWeight: 700, fontSize: 18 }}>{r}</span>
+                <span style={{ fontSize: 10, fontWeight: 500 }}>{label}</span>
+              </button>
             );
           })}
         </div>
@@ -1061,7 +1126,7 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
       {/* Relevamiento */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>Relevamiento correcto</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {RELEVAMIENTOS_TODOS.map(r => {
             const hab = relevPermitidos.includes(r);
             return (
@@ -1080,15 +1145,18 @@ function MiniCorrector({ piso, depto, itemId, faseId, registroOriginal, registro
       {/* Estado */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>Estado correcto</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-          {Object.entries(ESTADOS).map(([k, e]) => (
-            <button key={k} onClick={() => { setEstado(k); setError(""); }} style={{
-              padding: "10px 4px", borderRadius: 8, fontWeight: 700, fontSize: 11,
-              border: `2px solid ${estado === k ? e.color : G.border}`,
-              background: estado === k ? e.bg : G.surface2,
-              color: estado === k ? e.color : G.textMuted,
-            }}>{e.short}</button>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+          {Object.entries(ESTADOS).filter(([k]) => k !== "PENDIENTE").map(([k, e]) => {
+            const seleccionado = estado === k;
+            return (
+              <button key={k} onClick={() => { setEstado(seleccionado ? "" : k); setError(""); }} style={{
+                padding: "12px 4px", borderRadius: 8, fontWeight: 700, fontSize: 12,
+                border: `2px solid ${seleccionado ? e.color : G.border}`,
+                background: seleccionado ? e.bg : G.surface2,
+                color: seleccionado ? e.color : G.textMuted,
+              }}>{e.short}</button>
+            );
+          })}
         </div>
       </div>
 
@@ -1163,7 +1231,7 @@ function MiniActualizador({ piso, depto, itemId, faseId, registros, usuario, onG
       {/* Relevamiento */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#86efac", marginBottom: 6 }}>Relevamiento</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {RELEVAMIENTOS_TODOS.map(r => {
             const hab = relevPermitidos.includes(r);
             return (
@@ -1182,15 +1250,18 @@ function MiniActualizador({ piso, depto, itemId, faseId, registros, usuario, onG
       {/* Estado */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#86efac", marginBottom: 6 }}>Nuevo estado</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-          {Object.entries(ESTADOS).map(([k, e]) => (
-            <button key={k} onClick={() => { setEstado(k); setError(""); }} style={{
-              padding: "10px 4px", borderRadius: 8, fontWeight: 700, fontSize: 11,
-              border: `2px solid ${estado === k ? e.color : G.border}`,
-              background: estado === k ? e.bg : G.surface2,
-              color: estado === k ? e.color : G.textMuted,
-            }}>{e.short}</button>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+          {Object.entries(ESTADOS).filter(([k]) => k !== "PENDIENTE").map(([k, e]) => {
+            const seleccionado = estado === k;
+            return (
+              <button key={k} onClick={() => { setEstado(seleccionado ? "" : k); setError(""); }} style={{
+                padding: "12px 4px", borderRadius: 8, fontWeight: 700, fontSize: 12,
+                border: `2px solid ${seleccionado ? e.color : G.border}`,
+                background: seleccionado ? e.bg : G.surface2,
+                color: seleccionado ? e.color : G.textMuted,
+              }}>{e.short}</button>
+            );
+          })}
         </div>
       </div>
 
@@ -1301,8 +1372,18 @@ function HistorialInline({ piso, depto, itemId, faseId, registros, setPrefill, s
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario }) {
   const [piso, setPiso]         = useState(1);
-  const [faseOpen, setFaseOpen] = useState({ F1: true });
-  const [rubroOpen, setRubroOpen] = useState({});
+  const [faseOpen, setFaseOpen] = useState(() => {
+    const init = {};
+    FASES.forEach(f => { init[f.id] = true; });
+    return init;
+  });
+  const [rubroOpen, setRubroOpen] = useState(() => {
+    const init = {};
+    FASES.forEach(f => f.rubros.forEach(r => {
+      if (r.items.length > 0) init[`${f.id}-${r.id}`] = true;
+    }));
+    return init;
+  });
   const [sel, setSel]           = useState(null);
   const deptos = PISOS[piso];
 
@@ -1647,6 +1728,7 @@ function VistaInforme({ registros }) {
   const [filtroFase, setFiltroFase]   = useState("TODAS");
   const [filtroRubro, setFiltroRubro] = useState("TODOS");
   const [filtroTipo, setFiltroTipo]   = useState("TODOS"); // TODOS | NO_VERIFICA | VERIFICA_OBS
+  const [filtroPiso, setFiltroPiso]   = useState("TODOS");
   const todosPendientes = useMemo(() => {
     const result = [];
     FASES.forEach(fase => {
@@ -1673,9 +1755,10 @@ function VistaInforme({ registros }) {
       if (filtroFase !== "TODAS" && p.fase.id !== filtroFase) return false;
       if (filtroRubro !== "TODOS" && p.rubro.id !== filtroRubro) return false;
       if (filtroTipo !== "TODOS" && p.vigente.estado !== filtroTipo) return false;
+      if (filtroPiso !== "TODOS" && p.piso !== parseInt(filtroPiso)) return false;
       return true;
     });
-  }, [todosPendientes, filtroFase, filtroRubro, filtroTipo]);
+  }, [todosPendientes, filtroFase, filtroRubro, filtroTipo, filtroPiso]);
 
   // Rubros disponibles según fase seleccionada
   const rubrosDisponibles = useMemo(() => {
@@ -1725,6 +1808,11 @@ function VistaInforme({ registros }) {
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <select value={filtroPiso} onChange={e => setFiltroPiso(e.target.value)}
+            style={{ flex: 1, minWidth: 90, padding: "7px 10px", fontSize: 12 }}>
+            <option value="TODOS">Todos los pisos</option>
+            {Object.keys(PISOS).map(p => <option key={p} value={p}>Piso {p}</option>)}
+          </select>
           <select value={filtroFase} onChange={e => { setFiltroFase(e.target.value); setFiltroRubro("TODOS"); }}
             style={{ flex: 1, minWidth: 120, padding: "7px 10px", fontSize: 12 }}>
             <option value="TODAS">Todas las fases</option>
@@ -1773,54 +1861,85 @@ function VistaInforme({ registros }) {
       {pendientes.length > 0 && <div style={{ padding: "12px 16px 0" }}>
         {Object.keys(grupos).sort((a, b) => a - b).map(piso => (
           <div key={piso} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: G.accent, letterSpacing: 1, padding: "8px 12px", background: G.surface, borderRadius: "8px 8px 0 0", border: `1px solid ${G.border}`, borderBottom: "none" }}>
-              PISO {piso}
-            </div>
             {Object.keys(grupos[piso]).sort().map(depto => (
-              <div key={depto} style={{ border: `1px solid ${G.border}`, borderTop: "none", background: G.surface2 }}>
-                <div style={{ padding: "8px 12px", borderBottom: `1px solid ${G.border}`, fontSize: 12, fontWeight: 600, color: G.textDim, background: G.surface }}>
-                  Departamento {depto}
+              <div key={depto} style={{ marginBottom: 14 }}>
+                {/* Encabezado destacado: PISO + DEPTO */}
+                <div style={{
+                  padding: "10px 14px", background: G.accentDim, border: `2px solid ${G.accent}`,
+                  borderRadius: "10px 10px 0 0", display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <span style={{ fontSize: 20 }}>📍</span>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: G.accent, lineHeight: 1.1 }}>
+                      Piso {piso} · Depto {depto}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#fdba74" }}>
+                      {Object.values(grupos[piso][depto]).reduce((acc, f) => acc + Object.values(f.rubros).reduce((a2, r) => a2 + r.rows.length, 0), 0)} ítem(s) a corregir
+                    </div>
+                  </div>
                 </div>
-                {Object.keys(grupos[piso][depto]).map(faseId => {
-                  const faseData = grupos[piso][depto][faseId];
-                  return (
-                    <div key={faseId}>
-                      <div style={{ padding: "6px 12px", fontSize: 11, fontWeight: 700, color: G.accent, borderBottom: `1px solid ${G.border}`, background: G.surface }}>
-                        {faseData.nombre}
-                      </div>
-                      {Object.keys(faseData.rubros).map(rubroId => {
-                        const rubroData = faseData.rubros[rubroId];
-                        return (
-                          <div key={rubroId}>
-                            <div style={{ padding: "5px 12px", fontSize: 10, fontWeight: 700, color: G.textMuted, letterSpacing: 1, borderBottom: `1px solid ${G.border}`, textTransform: "uppercase" }}>
-                              {rubroData.nombre}
-                            </div>
-                            {rubroData.rows.map(({ item, vigente }) => (
-                              <div key={item.id} style={{ padding: "10px 12px", borderBottom: `1px solid ${G.border}`, borderLeft: `3px solid ${ESTADOS[vigente.estado]?.color}` }}>
-                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 4 }}>
-                                  <span style={{ fontFamily: G.mono, fontSize: 10, color: G.textMuted }}>#{item.id}</span>
-                                  <div style={{ flex: 1 }}>
+
+                <div style={{ border: `1px solid ${G.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden", background: G.surface2 }}>
+                  {Object.keys(grupos[piso][depto]).map(faseId => {
+                    const faseData = grupos[piso][depto][faseId];
+                    return (
+                      <div key={faseId}>
+                        {Object.keys(faseData.rubros).map(rubroId => {
+                          const rubroData = faseData.rubros[rubroId];
+                          return (
+                            <div key={rubroId}>
+                              {/* Etiqueta fase · rubro como contexto secundario */}
+                              <div style={{ padding: "5px 14px", fontSize: 10, fontWeight: 700, color: G.textMuted, letterSpacing: 1, borderBottom: `1px solid ${G.border}`, textTransform: "uppercase", background: G.surface }}>
+                                {faseData.nombre} · {rubroData.nombre}
+                              </div>
+                              {rubroData.rows.map(({ item, vigente }) => {
+                                const dias = diasHabilesDesde(vigente.fecha);
+                                const critico = vigente.estado === "NO_VERIFICA" && dias >= 5;
+                                const e = ESTADOS[vigente.estado];
+                                return (
+                                  <div key={item.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${G.border}`, borderLeft: `4px solid ${critico ? "#ef4444" : e?.color}` }}>
+                                    {/* Línea 1: estado + tipo/local/desc */}
+                                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                                      <EstadoBadge estado={vigente.estado} />
+                                      {critico && (
+                                        <span style={{ background: "#2d0a0a", color: "#f87171", border: "1px solid #b91c1c", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                          🚨 {dias}d sin corrección
+                                        </span>
+                                      )}
+                                      <div style={{ flex: 1, textAlign: "right", fontSize: 10, color: G.textMuted, fontFamily: G.mono }}>#{item.id}</div>
+                                    </div>
                                     <div style={{ fontSize: 11, color: G.textMuted, marginBottom: 2 }}>
                                       {item.tipo}{item.local !== "GENERAL" ? ` · ${item.local}` : ""}
                                     </div>
-                                    <div style={{ fontSize: 13, color: G.text }}>{item.desc}</div>
+                                    <div style={{ fontSize: 13, color: G.text, marginBottom: 8 }}>{item.desc}</div>
+
+                                    {/* Observación protagonista */}
+                                    {vigente.obs && (
+                                      <div style={{
+                                        background: e?.bg, border: `1px solid ${e?.border}`, borderRadius: 8,
+                                        padding: "10px 12px", marginBottom: 8,
+                                      }}>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: e?.color, letterSpacing: 1, marginBottom: 3 }}>📝 OBSERVACIÓN</div>
+                                        <div style={{ fontSize: 14, color: G.text, lineHeight: 1.4 }}>{vigente.obs}</div>
+                                      </div>
+                                    )}
+
+                                    {/* Datos auxiliares — chicos y discretos */}
+                                    <div style={{ fontSize: 10, color: G.textMuted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                      <span>{vigente.relevamiento}</span>
+                                      <span>{vigente.responsable}</span>
+                                      <span>{formatFecha(vigente.fecha)}</span>
+                                    </div>
                                   </div>
-                                  <EstadoBadge estado={vigente.estado} />
-                                </div>
-                                <div style={{ fontSize: 11, color: G.textMuted, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                                  <span>{vigente.relevamiento}</span>
-                                  <span>{vigente.responsable}</span>
-                                  <span>{formatFecha(vigente.fecha)}</span>
-                                </div>
-                                {vigente.obs && <div style={{ fontSize: 12, color: G.textDim, marginTop: 4, fontStyle: "italic" }}>"{vigente.obs}"</div>}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>
@@ -1955,7 +2074,7 @@ export default function App() {
         {vista === "dash"    && <VistaDashboard registros={registros} setPrefill={setPrefill} setVista={setVista} T={T} onGuardar={onGuardar} usuario={usuario} />}
         {vista === "cert"    && <VistaCertificaciones registros={registros} setVista={setVista} T={T} />}
         {vista === "informe" && <VistaInforme registros={registros} T={T} />}
-        {vista === "admin"   && usuario?.admin && <VistaAdmin usuarios={usuarios} setUsuarios={setUsuarios} T={T} />}
+        {vista === "admin"   && usuario?.admin && <VistaAdmin usuarios={usuarios} setUsuarios={setUsuarios} T={T} registros={registros} />}
       </div>
     </>
   );
