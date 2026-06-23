@@ -342,13 +342,20 @@ function getHistorial(registros, piso, depto, itemId) {
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
 async function cargarRegistros() {
-  const { data, error } = await supabase.from("registros").select("*").order("fecha", { ascending: true });
-  if (error) throw new Error(error.message);
-  const result = (data || []).map(normalizarRegistro);
-  // DEBUG TEMPORAL
-  const p4a = result.filter(r => r.piso === 4 && r.depto === "A");
-  console.log("DEBUG cargarRegistros - total:", result.length, "P4A:", p4a.length, "primer P4A:", JSON.stringify(p4a[0]));
-  return result;
+  const PAGE = 1000;
+  let todos = [];
+  let desde = 0;
+  while (true) {
+    const { data, error } = await supabase.from("registros").select("*")
+      .order("fecha", { ascending: true })
+      .range(desde, desde + PAGE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    todos = todos.concat(data.map(normalizarRegistro));
+    if (data.length < PAGE) break;
+    desde += PAGE;
+  }
+  return todos;
 }
 
 async function insertarRegistro(registro, intento = 0) {
