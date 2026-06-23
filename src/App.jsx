@@ -1602,7 +1602,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                         itemId={selParsed.itemId} faseId={selParsed.faseId}
                                         registros={registros} setPrefill={setPrefill} setVista={setVista}
                                         onClose={() => setSel(null)}
-                                        onGuardar={() => { onGuardar(); setSel(null); }} usuario={usuario}
+                                        onGuardar={async () => { await onGuardar(); setSel(null); }} usuario={usuario}
                                       />
                                     </td>
                                   </tr>
@@ -2073,7 +2073,7 @@ export default function App() {
     return () => clearInterval(pollingRef.current);
   }, [cargar]);
 
-  const onGuardar = useCallback(() => { cargar(); }, [cargar]);
+  const onGuardar = useCallback(async () => { await cargar(); }, [cargar]);
 
   function handleLogin(u) {
     lsSet(SESSION_KEY, u);
