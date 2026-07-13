@@ -1541,10 +1541,10 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                           <col style={{ width: ITEM_COL_W }} />
                           {deptos.map(d => <col key={d} style={{ width: CELL_W }} />)}
                         </colgroup>
-                        <thead style={{ position: "sticky", top: 96, zIndex: 10, background: G.surface }}>
+                        <thead>
                           <tr>
-                            <th style={{ textAlign: "left", fontSize: 10, color: G.textMuted, padding: "6px 8px 6px 0", fontWeight: 400, background: G.surface }}>Ítem</th>
-                            {deptos.map(d => <th key={d} style={{ fontSize: 11, fontWeight: 700, color: G.accent, textAlign: "center", padding: "6px 0", background: G.surface }}>{d}</th>)}
+                            <th style={{ textAlign: "left", fontSize: 11, color: G.textMuted, padding: "0 8px 8px 0", fontWeight: 400, background: G.surface }}>Ítem</th>
+                            {deptos.map(d => <th key={d} style={{ fontSize: 13, fontWeight: 800, color: G.accent, textAlign: "center", padding: "0 0 8px", background: G.surface }}>{d}</th>)}
                           </tr>
                         </thead>
                         <tbody>
@@ -1556,9 +1556,9 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                     <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
                                       <span style={{ fontFamily: G.mono, fontSize: 8, color: G.textMuted, flexShrink: 0 }}>#{item.id}</span>
                                       <span style={{ fontSize: 8, color: G.accent, fontWeight: 700, flexShrink: 0, textTransform: "uppercase", letterSpacing: .3 }}>{item.tipo}</span>
-                                      {item.local !== "GENERAL" && <span style={{ fontSize: 8, background: G.surface2, border: `1px solid ${G.border}`, borderRadius: 3, padding: "0 4px", color: G.textDim, flexShrink: 0 }}>{item.local}</span>}
+                                      {item.local !== "GENERAL" && <span style={{ fontSize: 9, background: G.surface2, border: `1px solid ${G.border}`, borderRadius: 3, padding: "0 4px", color: G.textDim, flexShrink: 0 }}>{item.local}</span>}
                                     </div>
-                                    <div style={{ fontSize: 10, color: G.textDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.desc}</div>
+                                    <div style={{ fontSize: 12, color: G.textDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.desc}</div>
                                   </td>
                                   {deptos.map(d => {
                                     const vigente = getEstadoVigente(registros, piso, d, item.id, fase.id);
@@ -1597,7 +1597,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                           background: isSelected ? e.color + "55" : e.bg,
                                           border: `2px solid ${isSelected ? e.color : vigente ? e.border : G.border}`,
                                           borderRadius: 5, cursor: "pointer", textAlign: "center",
-                                          fontSize: 9, fontWeight: 700, color: e.color, position: "relative", userSelect: "none",
+                                          fontSize: 11, fontWeight: 700, color: e.color, position: "relative", userSelect: "none",
                                         }}>
                                         {e.short}
                                         {apto && <span style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid #0a0c10" }} />}
