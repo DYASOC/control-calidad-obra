@@ -109,6 +109,7 @@ const FASES = [
           { id: 33, tipo: "TOMAS",             local: "BAÑO",          desc: "Distancia de brazo en pared en eje con centro de vanitory a revoque" },
           { id: 34, tipo: "TOMAS",             local: "ESTAR",         desc: "Toma TV colocado según plano" },
           { id: 35, tipo: "TOMAS",             local: "DORMITORIO SC", desc: "Toma TV colocado según plano" },
+          { id: 98, tipo: "BOCAS",             local: "GENERAL",       desc: "Cantidad y ubicación de tomas según plano" },
           { id: 66, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 67, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
         ],
@@ -1449,7 +1450,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
   const deptos = PISOS[piso];
 
   // Ancho fijo de celda para alineación consistente
-  const CELL_W = 34;
+  const CELL_W = 42;
   const ITEM_COL_W = 190;
 
   function handleCelda(piso, depto, itemId, faseId) {
@@ -1535,15 +1536,15 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
 
                   {rubroAbierto && (
                     <div style={{ overflowX: "auto", padding: "8px 12px" }}>
-                      <table style={{ borderCollapse: "separate", borderSpacing: 3, tableLayout: "fixed", width: `${ITEM_COL_W + deptos.length * (CELL_W + 3) + 10}px` }}>
+                      <table style={{ borderCollapse: "separate", borderSpacing: 5, tableLayout: "fixed", width: `${ITEM_COL_W + deptos.length * (CELL_W + 5) + 10}px` }}>
                         <colgroup>
                           <col style={{ width: ITEM_COL_W }} />
                           {deptos.map(d => <col key={d} style={{ width: CELL_W }} />)}
                         </colgroup>
-                        <thead>
+                        <thead style={{ position: "sticky", top: 96, zIndex: 10, background: G.surface }}>
                           <tr>
-                            <th style={{ textAlign: "left", fontSize: 10, color: G.textMuted, padding: "0 8px 6px 0", fontWeight: 400 }}>Ítem</th>
-                            {deptos.map(d => <th key={d} style={{ fontSize: 11, fontWeight: 700, color: G.accent, textAlign: "center", padding: "0 0 6px" }}>{d}</th>)}
+                            <th style={{ textAlign: "left", fontSize: 10, color: G.textMuted, padding: "6px 8px 6px 0", fontWeight: 400, background: G.surface }}>Ítem</th>
+                            {deptos.map(d => <th key={d} style={{ fontSize: 11, fontWeight: 700, color: G.accent, textAlign: "center", padding: "6px 0", background: G.surface }}>{d}</th>)}
                           </tr>
                         </thead>
                         <tbody>
@@ -1599,7 +1600,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                           fontSize: 9, fontWeight: 700, color: e.color, position: "relative", userSelect: "none",
                                         }}>
                                         {e.short}
-                                        {apto && <span style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: "50%", background: "#22c55e", border: "2px solid #0a0c10" }} />}
+                                        {apto && <span style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid #0a0c10" }} />}
                                         {tuvoNV && eKey !== "NO_VERIFICA" && <span style={{ position: "absolute", bottom: -3, left: -3, width: 9, height: 9, borderRadius: "50%", background: "#f97316", border: "2px solid #0a0c10" }} />}
                                       </td>
                                     );
