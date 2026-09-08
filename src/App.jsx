@@ -864,7 +864,8 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [errores, setErrores]   = useState([]);
 
-  const deptos = piso ? PISOS[parseInt(piso)] : [];
+  const pisoKey  = piso === "FAC" ? "FAC" : (piso ? parseInt(piso) : null);
+  const deptos = pisoKey ? (PISOS[pisoKey] || []) : [];
   const fasesActivas = piso === 'FAC' ? FASES_FACHADA : FASES;
   const faseSeleccionada = fasesActivas.find(f => f.id === faseId);
   const rubrosConItems = faseSeleccionada?.rubros.filter(r => r.items.length > 0) || [];
@@ -939,7 +940,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
 
       // Navegación rápida entre deptos
       if (irA && piso && faseId) {
-        const listaDeptos = PISOS[parseInt(piso)];
+        const listaDeptos = PISOS[piso === "FAC" ? "FAC" : parseInt(piso)] || [];
         const idxActual   = listaDeptos.indexOf(depto);
         const idxNuevo    = irA === "next" ? idxActual + 1 : idxActual - 1;
         if (idxNuevo >= 0 && idxNuevo < listaDeptos.length) {
@@ -975,7 +976,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   const guardando = estadoGuardar === "guardando";
 
   // Calcular índice actual del depto para habilitar botones de nav
-  const listaDeptos    = piso ? PISOS[parseInt(piso)] : [];
+  const listaDeptos    = piso ? (PISOS[piso === "FAC" ? "FAC" : parseInt(piso)] || []) : [];
   const idxDeptoActual = listaDeptos.indexOf(depto);
   const hayAnterior    = idxDeptoActual > 0;
   const haySiguiente   = idxDeptoActual >= 0 && idxDeptoActual < listaDeptos.length - 1;
@@ -1538,18 +1539,18 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
   const [piso, setPiso]         = useState(1);
   const [faseOpen, setFaseOpen] = useState(() => {
     const init = {};
-    FASES.forEach(f => { init[f.id] = true; });
+    [...FASES, ...FASES_FACHADA].forEach(f => { init[f.id] = true; });
     return init;
   });
   const [rubroOpen, setRubroOpen] = useState(() => {
     const init = {};
-    FASES.forEach(f => f.rubros.forEach(r => {
+    [...FASES, ...FASES_FACHADA].forEach(f => f.rubros.forEach(r => {
       if (r.items.length > 0) init[`${f.id}-${r.id}`] = true;
     }));
     return init;
   });
   const [sel, setSel]           = useState(null);
-  const deptos = PISOS[piso];
+  const deptos = piso === "FAC" ? PISOS["FAC"] : (PISOS[piso] || []);
 
   // Ancho fijo de celda para alineación consistente
   const CELL_W = 42;
