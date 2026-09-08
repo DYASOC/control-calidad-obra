@@ -11,6 +11,7 @@ const PISOS = {
   6: ["E","F","G","H","I","J","K","L","M"],
   7: ["E","F","G","H","I","J","K","L","M"],
   8: ["H","I","J","K","L","M","SUM"],
+  "FAC": ["NORTE","ESTE","SUR","OESTE"],
 };
 
 // ─── USUARIOS PREDEFINIDOS ────────────────────────────────────────────────────
@@ -160,6 +161,7 @@ const FASES = [
           { id: 48, tipo: "LOSA RADIANTE", local: "CIRCUITO SC",   desc: "No ingresan a duchas, placares ni banquinas (distancia a 10 cm)" },
           { id: 49, tipo: "LOSA RADIANTE", local: "CIRCUITO SC",   desc: "Buena densidad de distribución en baño" },
           { id: 50, tipo: "LOSA RADIANTE", local: "GENERAL",       desc: "Manguera no sobresale de la carpeta (a 3 cm de NPT)" },
+          { id: 99, tipo: "LOSA RADIANTE", local: "GENERAL",       desc: "Nivel no menor a 1,04. Idealmente 1,06" },
           { id: 74, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 75, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
         ],
@@ -169,9 +171,9 @@ const FASES = [
         items: [
           { id: 76, tipo: "NIVEL",       local: "GENERAL", desc: "Nivel terminado 1,02 m" },
           { id: 77, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Correcta terminación" },
+          { id: 100, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Que no se sienta hueco al golpe" },
           { id: 78, tipo: "TERMINACIÓN", local: "GENERAL", desc: "No queden caños a la vista" },
           { id: 79, tipo: "DUCHA",       local: "BAÑO",    desc: "Colocado el receptáculo de ducha" },
-          { id: 80, tipo: "DUCHA",       local: "BAÑO",    desc: "Correcta pendiente de ducha" },
           { id: 81, tipo: "DUCHA",       local: "BAÑO",    desc: "Impermeabilización de ducha" },
           { id: 82, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 83, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
@@ -180,41 +182,118 @@ const FASES = [
       {
         id: "YESO_ARM", nombre: "Yeso (Armados)",
         items: [
-          { id: 84, tipo: "BASTIDOR", local: "GENERAL", desc: "Armado lo más pegado posible a los caños de la losa" },
+          { id: 84, tipo: "BASTIDOR", local: "BAÑO",    desc: "Armado lo más pegado posible a los caños de la losa" },
+          { id: 101, tipo: "BASTIDOR", local: "COCINA",  desc: "Correcta altura 2,28" },
           { id: 85, tipo: "BASTIDOR", local: "GENERAL", desc: "Todas las instalaciones completas antes del metal desplegado" },
-          { id: 86, tipo: "BASTIDOR", local: "GENERAL", desc: "Tomas, bocas y llaves identificadas previo al yesado" },
+          { id: 86, tipo: "BASTIDOR", local: "COCINA",  desc: "Bocas identificadas previo al yesado" },
           { id: 87, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 88, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
         ],
       },
       { id: "HERRERIA",      nombre: "Herrería",                       items: [] },
-      { id: "CARPETAS_BAL",  nombre: "Carpetas Balcones",              items: [] },
+      {
+        id: "CARPETAS_BAL", nombre: "Carpetas Balcones",
+        items: [
+          { id: 104, tipo: "CANALETA",   local: "GENERAL", desc: "Pendiente a la canaleta" },
+          { id: 105, tipo: "CANALETA",   local: "GENERAL", desc: "Controlar profundidad y ancho canaleta 10 cm" },
+          { id: 106, tipo: "EMBUDO",     local: "GENERAL", desc: "Correcta colocación del embudo - masa homogénea, sin parche" },
+          { id: 107, tipo: "NIVELES",    local: "GENERAL", desc: "Nivel contra premarco = 1,02" },
+          { id: 108, tipo: "LIMPIEZA",   local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 109, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
       {
         id: "YESO", nombre: "Yeso",
         items: [
-          { id: 89, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Superficie lisa, sin fisuras ni burbujas" },
-          { id: 90, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Control de superficie que lleva yeso" },
-          { id: 91, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Plomo" },
-          { id: 92, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Escuadra" },
+          { id: 89, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Superficie lisa, sin fisuras ni burbujas - Modo de control: Reflector" },
+                    { id: 91, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Plomo - Nivel de mano de 1m" },
+          { id: 92, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Escuadra - Tolerancia 0,5 cm" },
           { id: 93, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Bocas, tomas, llaves y caja de colectores identificadas y protegidas" },
           { id: 94, tipo: "TERMINACIÓN", local: "BAÑO",    desc: "Verificar márgenes de yeso en baño" },
           { id: 95, tipo: "TERMINACIÓN", local: "COCINA",  desc: "Verificar márgenes de yeso en cocina" },
+          { id: 102, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Correcta nivelación de cielorraso" },
+          { id: 103, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Rejillas de gas colocadas" },
           { id: 96, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 97, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
         ],
       },
       { id: "ICI",           nombre: "Inst. Contra Incendio",          items: [] },
       { id: "ISB",           nombre: "Inst. Señales Débiles",          items: [] },
-      { id: "CUBIERTAS1",    nombre: "Cubiertas",                      items: [] },
+      {
+        id: "CUBIERTAS1", nombre: "Cubiertas Contratechos",
+        items: [
+          { id: 110, tipo: "PENDIENTE",  local: "GENERAL", desc: "Correctas pendientes" },
+          { id: 111, tipo: "EMBUDO",     local: "GENERAL", desc: "Embudos colocados sin parche" },
+          { id: 112, tipo: "GARGANTAS",  local: "GENERAL", desc: "Garganta perimetral bien ejecutada en perímetro" },
+          { id: 113, tipo: "GARGANTAS",  local: "GENERAL", desc: "Garganta perimetral bien ejecutada en salidas verticales" },
+          { id: 114, tipo: "TERMINACIÓN",local: "GENERAL", desc: "Correcta terminación superficial" },
+          { id: 115, tipo: "LIMPIEZA",   local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 116, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
+      {
+        id: "CUBIERTAS_MEM", nombre: "Cubierta Membrana",
+        items: [
+          { id: 117, tipo: "EMBUDO",        local: "GENERAL", desc: "Embudos sellados" },
+          { id: 118, tipo: "JUNTA",         local: "GENERAL", desc: "Control de junta de membrana" },
+          { id: 119, tipo: "ZOCALO",        local: "GENERAL", desc: "Zócalo de membrana 15 cm" },
+          { id: 120, tipo: "SELLADO",       local: "GENERAL", desc: "Correcto sellado de ventilaciones" },
+          { id: 121, tipo: "FUNCIONAMIENTO",local: "GENERAL", desc: "Prueba hidráulica ejecutada y correcta" },
+          { id: 122, tipo: "LIMPIEZA",      local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 123, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
       { id: "INST_SAN_VENT", nombre: "Inst. Sanitaria (Ventilaciones)",items: [] },
-      { id: "REV_EXT",       nombre: "Revoque Exterior",               items: [] },
+      {
+        id: "REV_EXT", nombre: "Revoque Balcones",
+        items: [
+          { id: 131, tipo: "VENTILACION", local: "GENERAL", desc: "Ventilaciones / cajas de aires bien selladas" },
+          { id: 132, tipo: "REJILLAS",    local: "GENERAL", desc: "Rejillas de gas colocadas" },
+          { id: 133, tipo: "REJILLAS",    local: "GENERAL", desc: "Rejillas de gas limpias" },
+          { id: 134, tipo: "VENTILACION", local: "GENERAL", desc: "Ventilaciones con pendiente hacia afuera" },
+          { id: 135, tipo: "PENDIENTES",  local: "GENERAL", desc: "Parapeto de balcón con pendiente hacia balcón" },
+          { id: 136, tipo: "PENDIENTES",  local: "GENERAL", desc: "Antepecho de ventana con pendiente hacia afuera" },
+          { id: 137, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Gotero escuadrado y recto" },
+          { id: 138, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Cortagota recto" },
+          { id: 139, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Revisar filos balcones" },
+          { id: 140, tipo: "LIMPIEZA",    local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 141, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
       { id: "CUBIERTAS2",    nombre: "Cubiertas (2)",                  items: [] },
     ],
   },
   {
     id: "F3", nombre: "Fase 3",
     rubros: [
-      { id: "SOLADOS",       nombre: "Solados",                                    items: [] },
+      {
+        id: "SOLADOS_INT", nombre: "Solados Interiores",
+        items: [
+          { id: 142, tipo: "INTERIOR", local: "GENERAL", desc: "Niveles" },
+          { id: 143, tipo: "INTERIOR", local: "GENERAL", desc: "Terminación superficial (Prueba Moneda)" },
+          { id: 144, tipo: "INTERIOR", local: "GENERAL", desc: "Piezas no saltadas" },
+          { id: 145, tipo: "INTERIOR", local: "GENERAL", desc: "Que no estén huecos (Prueba de la escoba)" },
+          { id: 146, tipo: "INTERIOR", local: "GENERAL", desc: "Escuadra" },
+          { id: 147, tipo: "INTERIOR", local: "GENERAL", desc: "Tomado de junta completo, parejo, no poroso, uniforme color" },
+          { id: 80,  tipo: "DUCHA",   local: "BAÑO",    desc: "Correcta pendiente de ducha" },
+          { id: 148, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 149, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
+      {
+        id: "SOLADOS_BAL", nombre: "Solados Balcones",
+        items: [
+          { id: 150, tipo: "BALCON", local: "GENERAL", desc: "Impermeabilización de balcón" },
+          { id: 151, tipo: "BALCON", local: "GENERAL", desc: "Niveles" },
+          { id: 152, tipo: "BALCON", local: "GENERAL", desc: "Terminación superficial (Prueba Moneda)" },
+          { id: 153, tipo: "BALCON", local: "GENERAL", desc: "Piezas no saltadas" },
+          { id: 154, tipo: "BALCON", local: "GENERAL", desc: "Que no estén huecos (Prueba de la escoba)" },
+          { id: 155, tipo: "BALCON", local: "GENERAL", desc: "Escuadra" },
+          { id: 156, tipo: "BALCON", local: "GENERAL", desc: "Tomado de junta completo, parejo, no poroso, uniforme color" },
+          { id: 157, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 158, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
       { id: "REV_COCINA",    nombre: "Revestimientos Cocina",                      items: [] },
       { id: "CONST_SECO",    nombre: "Construcción en Seco (Cielorasos Balcones)", items: [] },
       { id: "CARP_ALU",      nombre: "Carpintería Aluminio",                       items: [] },
@@ -258,7 +337,29 @@ const FASES = [
 ];
 
 
-const TODOS_ITEMS = FASES.flatMap(f => f.rubros.flatMap(r => r.items));
+
+// ─── FASES FACHADA ───────────────────────────────────────────────────────────
+const FASES_FACHADA = [
+  {
+    id: "FF1", nombre: "Fachada",
+    rubros: [
+      {
+        id: "REV_FAC", nombre: "Revoque Exterior",
+        items: [
+          { id: 124, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Ventilaciones ejecutadas y alineadas con calandro" },
+          { id: 125, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Horizontalidad de buña" },
+          { id: 126, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Continuidad de buña" },
+          { id: 127, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Revisar filos verticales del paño" },
+          { id: 128, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Ventilaciones / cajas de aires bien selladas" },
+          { id: 129, tipo: "LIMPIEZA",    local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 130, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
+        ],
+      },
+    ],
+  },
+];
+
+const TODOS_ITEMS = [...FASES, ...FASES_FACHADA].flatMap(f => f.rubros.flatMap(r => r.items));
 
 const ESTADOS = {
   VERIFICA:     { label: "Verifica",       short: "V",  color: "#22c55e", bg: "#052e16", border: "#16a34a" },
@@ -294,7 +395,7 @@ function normalizarRelevamiento(r) {
 
 function normalizarRegistro(row) {
   return {
-    id: row.id, piso: row.piso, depto: row.depto,
+    id: row.id, piso: row.piso === 'FAC' ? 'FAC' : row.piso, depto: row.depto,
     relevamiento: normalizarRelevamiento(row.relevamiento),
     responsable: row.responsable,
     rol: row.rol, fecha: row.fecha,
@@ -764,7 +865,8 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
   const [errores, setErrores]   = useState([]);
 
   const deptos = piso ? PISOS[parseInt(piso)] : [];
-  const faseSeleccionada = FASES.find(f => f.id === faseId);
+  const fasesActivas = piso === 'FAC' ? FASES_FACHADA : FASES;
+  const faseSeleccionada = fasesActivas.find(f => f.id === faseId);
   const rubrosConItems = faseSeleccionada?.rubros.filter(r => r.items.length > 0) || [];
 
   // Auto-guardar borrador cada vez que cambia algo
@@ -820,7 +922,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
     setEstadoGuardar("guardando");
     setErrorMsg("");
     const registro = {
-      id: uid(), piso: parseInt(piso), depto,
+      id: uid(), piso: piso === 'FAC' ? 'FAC' : parseInt(piso), depto,
       relevamiento: relev, fase: faseId,
       responsable: usuario.nombre, rol: usuario.rol,
       fecha: new Date().toISOString(),
@@ -917,7 +1019,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
             <label style={{ fontSize: 12, color: G.textMuted, display: "block", marginBottom: 6 }}>Piso</label>
             <select value={piso} onChange={e => { setPiso(e.target.value); setDepto(""); }}>
               <option value="">— Piso —</option>
-              {Object.keys(PISOS).map(p => <option key={p} value={p}>Piso {p}</option>)}
+              {Object.keys(PISOS).map(p => <option key={p} value={p}>{p === "FAC" ? "Fachada" : `Piso ${p}`}</option>)}
             </select>
           </div>
           <div>
@@ -937,7 +1039,7 @@ function VistaFormulario({ onGuardar, prefill, setPrefill, usuario, T = G }) {
           <label style={{ fontSize: 12, color: G.textMuted, display: "block", marginBottom: 6 }}>Fase</label>
           <select value={faseId} onChange={e => { setFaseId(e.target.value); setItemsForm({}); setRubrosOpen({}); }}>
             <option value="">— Seleccioná la fase —</option>
-            {FASES.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+            {fasesActivas.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
           </select>
         </div>
         <label style={{ fontSize: 12, color: G.textMuted, display: "block", marginBottom: 6 }}>Relevamiento</label>
@@ -1476,19 +1578,24 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
     <div style={{ paddingBottom: 60 }}>
       {/* Selector piso */}
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexWrap: "wrap", borderBottom: `1px solid ${G.border}` }}>
-        {Object.keys(PISOS).map(p => (
-          <button key={p} onClick={() => { setPiso(parseInt(p)); setSel(null); }} style={{
-            padding: "7px 12px", borderRadius: 8,
-            border: `2px solid ${piso === parseInt(p) ? G.accent : G.border}`,
-            background: piso === parseInt(p) ? G.accentDim : G.surface,
-            color: piso === parseInt(p) ? G.accent : G.textMuted,
-            fontWeight: 700, fontSize: 13,
-          }}>P{p}</button>
-        ))}
+        {Object.keys(PISOS).map(p => {
+          const esFac = p === "FAC";
+          const pisoVal = esFac ? "FAC" : parseInt(p);
+          const seleccionado = piso === pisoVal;
+          return (
+            <button key={p} onClick={() => { setPiso(pisoVal); setSel(null); }} style={{
+              padding: "7px 12px", borderRadius: 8,
+              border: `2px solid ${seleccionado ? G.accent : G.border}`,
+              background: seleccionado ? G.accentDim : G.surface,
+              color: seleccionado ? G.accent : G.textMuted,
+              fontWeight: 700, fontSize: 13,
+            }}>{esFac ? "FAC" : `P${p}`}</button>
+          );
+        })}
       </div>
 
       {/* Fases */}
-      {FASES.map(fase => {
+      {(piso === "FAC" ? FASES_FACHADA : FASES).map(fase => {
         const rubrosConItems = fase.rubros.filter(r => r.items.length > 0);
         if (rubrosConItems.length === 0) return null;
         const faseAbierta = !!faseOpen[fase.id];
@@ -1684,19 +1791,24 @@ function VistaCertificaciones({ registros, setVista }) {
   return (
     <div style={{ paddingBottom: 60 }}>
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexWrap: "wrap", borderBottom: `1px solid ${G.border}` }}>
-        {Object.keys(PISOS).map(p => (
-          <button key={p} onClick={() => setPiso(parseInt(p))} style={{
-            padding: "7px 12px", borderRadius: 8,
-            border: `2px solid ${piso === parseInt(p) ? G.accent : G.border}`,
-            background: piso === parseInt(p) ? G.accentDim : G.surface,
-            color: piso === parseInt(p) ? G.accent : G.textMuted,
-            fontWeight: 700, fontSize: 13,
-          }}>P{p}</button>
-        ))}
+        {Object.keys(PISOS).map(p => {
+          const esFac = p === "FAC";
+          const pisoVal = esFac ? "FAC" : parseInt(p);
+          const seleccionado = piso === pisoVal;
+          return (
+            <button key={p} onClick={() => setPiso(pisoVal)} style={{
+              padding: "7px 12px", borderRadius: 8,
+              border: `2px solid ${seleccionado ? G.accent : G.border}`,
+              background: seleccionado ? G.accentDim : G.surface,
+              color: seleccionado ? G.accent : G.textMuted,
+              fontWeight: 700, fontSize: 13,
+            }}>{esFac ? "FAC" : `P${p}`}</button>
+          );
+        })}
       </div>
 
       <div style={{ padding: "12px 16px" }}>
-        {FASES.map(fase => {
+        {(piso === 'FAC' ? FASES_FACHADA : FASES).map(fase => {
           const rubrosConItems = fase.rubros.filter(r => r.items.length > 0);
           if (rubrosConItems.length === 0) return null;
           const todosAbiertos = rubrosConItems.every(r => !!rubroOpen[`${fase.id}-${r.id}`]);
