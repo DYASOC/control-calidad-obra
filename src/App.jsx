@@ -77,9 +77,7 @@ const FASES = [
       {
         id: "REVOQUE_BC", nombre: "Revoque (Baños y Cocinas)",
         items: [
-          { id: 58, tipo: "REVOQUE GRUESO",           local: "GENERAL", desc: "Paredes aplomadas y a escuadra" },
-          { id: 59, tipo: "PROTECCIÓN INSTALACIONES", local: "GENERAL", desc: "Bocas, tomas y llaves identificadas y protegidas" },
-          { id: 64, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
+          { id: 58, tipo: "REVOQUE GRUESO",           local: "GENERAL", desc: "Paredes aplomadas y a escuadra" },          { id: 64, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
           { id: 65, tipo: "OBSERVACIONES ADICIONALES", local: "GENERAL", desc: "Observaciones generales" },
         ],
       },
@@ -428,7 +426,7 @@ function getEstadoVigente(registros, piso, depto, itemId, fase) {
 
 function getAptoCertificar(registros, piso, depto, itemId, fase) {
   const v = getEstadoVigente(registros, piso, depto, itemId, fase);
-  return v?.relevamiento === "RF" && v?.estado === "VERIFICA";
+  return v?.relevamiento === "RF" && (v?.estado === "VERIFICA" || v?.estado === "VERIFICA_OBS");
 }
 
 function getCertRubro(registros, piso, depto, rubro, faseId) {
@@ -1654,7 +1652,19 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                         <thead>
                           <tr>
                             <th style={{ textAlign: "left", fontSize: 11, color: G.textMuted, padding: "0 8px 8px 0", fontWeight: 400, background: G.surface }}>Ítem</th>
-                            {deptos.map(d => <th key={d} style={{ fontSize: 13, fontWeight: 800, color: G.accent, textAlign: "center", padding: "0 0 8px", background: G.surface }}>{d}</th>)}
+                            {deptos.map(d => {
+                              const aptos = rubro.items.filter(i => getAptoCertificar(registros, piso, d, i.id, fase.id)).length;
+                              const total = rubro.items.length;
+                              const completo = aptos === total;
+                              return (
+                                <th key={d} style={{ textAlign: "center", padding: "0 0 4px", background: G.surface }}>
+                                  <div style={{ fontSize: 13, fontWeight: 800, color: G.accent }}>{d}</div>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: completo ? "#3b82f6" : G.textMuted, fontFamily: G.mono }}>
+                                    {aptos}/{total}
+                                  </div>
+                                </th>
+                              );
+                            })}
                           </tr>
                         </thead>
                         <tbody>
