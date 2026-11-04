@@ -211,6 +211,7 @@ const FASES = [
           { id: 93, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Bocas, tomas, llaves y caja de colectores identificadas y protegidas" },
           { id: 94, tipo: "TERMINACIÓN", local: "BAÑO",    desc: "Verificar márgenes de yeso en baño" },
           { id: 95, tipo: "TERMINACIÓN", local: "COCINA",  desc: "Verificar márgenes de yeso en cocina" },
+          { id: 161, tipo: "TERMINACIÓN", local: "DORMITORIO", desc: "Distancia de buña a fondo de placard 65 cm (tolerancia 1,5 cm)" },
           { id: 102, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Correcta nivelación de cielorraso" },
           { id: 103, tipo: "TERMINACIÓN", local: "GENERAL", desc: "Rejillas de gas colocadas" },
           { id: 96, tipo: "LIMPIEZA", local: "GENERAL", desc: "Limpieza del rubro" },
@@ -1721,6 +1722,7 @@ function VistaDashboard({ registros, setPrefill, setVista, onGuardar, usuario })
                                         }}>
                                         {e.short}
                                         {apto && <span style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid #0a0c10" }} />}
+                                        {vigente?.relevamiento === "RF" && eKey === "NO_VERIFICA" && <span title="No Verifica marcado por Oficina Técnica (Revisión Final)" style={{ position: "absolute", top: -4, right: -4, width: 12, height: 12, borderRadius: "50%", background: "#ff1f1f", border: "2px solid #0a0c10" }} />}
                                         {tuvoNV && eKey !== "NO_VERIFICA" && <span style={{ position: "absolute", bottom: -3, left: -3, width: 9, height: 9, borderRadius: "50%", background: "#f97316", border: "2px solid #0a0c10" }} />}
                                       </td>
                                     );
