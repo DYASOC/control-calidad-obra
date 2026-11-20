@@ -1920,12 +1920,14 @@ function VistaInforme({ registros }) {
   const [filtroPiso, setFiltroPiso]   = useState("TODOS");
   const todosPendientes = useMemo(() => {
     const result = [];
-    FASES.forEach(fase => {
+    [...FASES, ...FASES_FACHADA].forEach(fase => {
+      const esFac = FASES_FACHADA.includes(fase);
       fase.rubros.forEach(rubro => {
         if (rubro.items.length === 0) return;
         Object.keys(PISOS).forEach(ps => {
-          const piso = parseInt(ps);
-          PISOS[piso].forEach(depto => {
+          if ((ps === "FAC") !== esFac) return;
+          const piso = ps === "FAC" ? "FAC" : parseInt(ps);
+          (PISOS[ps] || []).forEach(depto => {
             rubro.items.forEach(item => {
               const v = getEstadoVigente(registros, piso, depto, item.id, fase.id);
               if (v && (v.estado === "NO_VERIFICA" || v.estado === "VERIFICA_OBS")) {
@@ -1944,14 +1946,15 @@ function VistaInforme({ registros }) {
       if (filtroFase !== "TODAS" && p.fase.id !== filtroFase) return false;
       if (filtroRubro !== "TODOS" && p.rubro.id !== filtroRubro) return false;
       if (filtroTipo !== "TODOS" && p.vigente.estado !== filtroTipo) return false;
-      if (filtroPiso !== "TODOS" && p.piso !== parseInt(filtroPiso)) return false;
+      if (filtroPiso !== "TODOS" && String(p.piso) !== String(filtroPiso)) return false;
       return true;
     });
   }, [todosPendientes, filtroFase, filtroRubro, filtroTipo, filtroPiso]);
 
   // Rubros disponibles según fase seleccionada
   const rubrosDisponibles = useMemo(() => {
-    const fases = filtroFase === "TODAS" ? FASES : FASES.filter(f => f.id === filtroFase);
+    const todasF = [...FASES, ...FASES_FACHADA];
+    const fases = filtroFase === "TODAS" ? todasF : todasF.filter(f => f.id === filtroFase);
     const set = new Map();
     fases.forEach(f => f.rubros.forEach(r => {
       if (todosPendientes.some(p => p.rubro.id === r.id)) set.set(r.id, r.nombre);
@@ -2000,12 +2003,12 @@ function VistaInforme({ registros }) {
           <select value={filtroPiso} onChange={e => setFiltroPiso(e.target.value)}
             style={{ flex: 1, minWidth: 90, padding: "7px 10px", fontSize: 12 }}>
             <option value="TODOS">Todos los pisos</option>
-            {Object.keys(PISOS).map(p => <option key={p} value={p}>Piso {p}</option>)}
+            {Object.keys(PISOS).map(p => <option key={p} value={p}>{p === "FAC" ? "Fachada" : `Piso ${p}`}</option>)}
           </select>
           <select value={filtroFase} onChange={e => { setFiltroFase(e.target.value); setFiltroRubro("TODOS"); }}
             style={{ flex: 1, minWidth: 120, padding: "7px 10px", fontSize: 12 }}>
             <option value="TODAS">Todas las fases</option>
-            {FASES.filter(f => f.rubros.some(r => r.items.length > 0)).map(f => (
+            {[...FASES, ...FASES_FACHADA].filter(f => f.rubros.some(r => r.items.length > 0)).map(f => (
               <option key={f.id} value={f.id}>{f.nombre}</option>
             ))}
           </select>
@@ -2048,7 +2051,7 @@ function VistaInforme({ registros }) {
       </div>
 
       {pendientes.length > 0 && <div style={{ padding: "12px 16px 0" }}>
-        {Object.keys(grupos).sort((a, b) => a - b).map(piso => (
+        {Object.keys(grupos).sort((a, b) => (a === "FAC" ? 1 : b === "FAC" ? -1 : a - b)).map(piso => (
           <div key={piso} style={{ marginBottom: 20 }}>
             {Object.keys(grupos[piso]).sort().map(depto => (
               <div key={depto} style={{ marginBottom: 14 }}>
@@ -2060,7 +2063,7 @@ function VistaInforme({ registros }) {
                   <span style={{ fontSize: 20 }}>📍</span>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: G.accent, lineHeight: 1.1 }}>
-                      Piso {piso} · Depto {depto}
+                      {piso === "FAC" ? "Fachada" : `Piso ${piso}`} · Depto {depto}
                     </div>
                     <div style={{ fontSize: 10, color: "#fdba74" }}>
                       {Object.values(grupos[piso][depto]).reduce((acc, f) => acc + Object.values(f.rubros).reduce((a2, r) => a2 + r.rows.length, 0), 0)} ítem(s) a corregir
